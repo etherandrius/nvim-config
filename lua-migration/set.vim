@@ -1,3 +1,10 @@
+
+set updatetime=250
+
+set signcolumn=yes
+
+set breakindent
+
 " Considers - inside a word to be a part of the word. fake-word
 set iskeyword+=-
 

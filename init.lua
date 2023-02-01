@@ -3,8 +3,9 @@
 --  NOTE: Must happen before plugins are required (otherwise wrong leader will be used)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
+vim.cmd('source ~/.config/nvim/lua-migration/color.vim')
 
--- Packer {{{
+-- [[ Packer ]] {{{
 -- Install packer {{{
 local install_path = vim.fn.stdpath 'data' .. '/site/pack/packer/start/packer.nvim'
 local is_bootstrap = false
@@ -14,7 +15,7 @@ if vim.fn.empty(vim.fn.glob(install_path)) > 0 then
   vim.cmd [[packadd packer.nvim]]
 end
 -- }}}
--- Plugins {{{
+-- [[ Plugins ]] {{{
 require('packer').startup(function(use)
   -- Package manager
   use 'wbthomason/packer.nvim'
@@ -22,15 +23,10 @@ require('packer').startup(function(use)
   use { -- LSP Configuration & Plugins
     'neovim/nvim-lspconfig',
     requires = {
-      -- Automatically install LSPs to stdpath for neovim
-      'williamboman/mason.nvim',
+      'williamboman/mason.nvim', -- Automatically install LSPs to stdpath for neovim
       'williamboman/mason-lspconfig.nvim',
-
-      -- Useful status updates for LSP
-      'j-hui/fidget.nvim',
-
-      -- Additional lua configuration, makes nvim stuff amazing
-      'folke/neodev.nvim',
+      'j-hui/fidget.nvim', -- Useful status updates for LSP
+      'folke/neodev.nvim', -- Additional lua configuration, makes nvim stuff amazing
     },
   }
 
@@ -73,9 +69,7 @@ require('packer').startup(function(use)
   -- text objects
   use 'wellle/targets.vim' -- 
   use 'michaeljsmith/vim-indent-object'
-  -- use 'tpope/vim-commentary' -- essential
   use 'numToStr/Comment.nvim' -- "gc" to comment visual regions/lines
-
 
   -- navigation
   use 'jremmen/vim-ripgrep'
@@ -83,8 +77,9 @@ require('packer').startup(function(use)
   use 'ggandor/lightspeed.nvim' -- type where you look
   use { 'nvim-telescope/telescope.nvim', branch = '0.1.x', requires = { 'nvim-lua/plenary.nvim' } }
   use { 'nvim-telescope/telescope-fzf-native.nvim', run = 'make', cond = vim.fn.executable 'make' == 1 }
+
 -- }}}
---- packer nonsense {{{
+--- packer setup {{{
   -- Add custom plugins to packer from ~/.config/nvim/lua/custom/plugins.lua
   local has_plugins, plugins = pcall(require, 'custom.plugins')
   if has_plugins then
@@ -117,8 +112,6 @@ vim.api.nvim_create_autocmd('BufWritePost', {
   pattern = vim.fn.expand '$MYVIMRC',
 })
 -- }}}
--- }}}
-
 -- [[Plugin Configuration]] {{{
 -- [[ lualine ]] {{{
 -- Set lualine as statusline
@@ -304,6 +297,9 @@ local servers = {
     Lua = {
       workspace = { checkThirdParty = false },
       telemetry = { enable = false },
+      diagnostics = {
+          globals = { 'vim' }
+      }
     },
   },
 }
@@ -386,26 +382,29 @@ cmp.setup {
   },
 }
 -- }}}
+
+vim.cmd('source ~/.config/nvim/lua-migration/plugins.vim')
+-- }}}
 -- }}}
 
--- [[ Setting options ]] {{{
--- See `:help vim.o`
+-- [[ Settings ]] {{{
+-- [[ Options ]] {{{
 
--- Enable break indent
-vim.o.breakindent = true
-
--- Decrease update time
-vim.o.updatetime = 250
-vim.wo.signcolumn = 'yes'
-
--- Keymaps for better default experience
+vim.cmd('source ~/.config/nvim/lua-migration/set.vim')
+-- }}}
+-- [[ Keymaps ]] {{{
 -- See `:help vim.keymap.set()`
+
 vim.keymap.set({ 'n', 'v' }, '<Space>', '<Nop>', { silent = true })
 
 -- Remap for dealing with word wrap
--- vim.keymap.set('n', 'k', "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
--- vim.keymap.set('n', 'j', "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
+vim.keymap.set('n', 'k', "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
+vim.keymap.set('n', 'j', "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
+
+vim.cmd('source ~/.config/nvim/lua-migration/keymaps.vim')
 -- }}}
+-- }}}
+
 -- [[ Random ]] {{{
 -- [[ Highlight on yank ]] {{{
 -- See `:help vim.highlight.on_yank()`
@@ -418,16 +417,7 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   pattern = '*',
 })
 -- }}}
--- }}}
--- TODO Migration to Lua {{{
-vim.cmd('source ~/.config/nvim/lua-migration/color.vim')
-vim.cmd('source ~/.config/nvim/lua-migration/keymaps.vim')
-vim.cmd('source ~/.config/nvim/lua-migration/set.vim')
-vim.cmd('source ~/.config/nvim/lua-migration/plugins.vim')
 vim.cmd('source ~/.config/nvim/lua-migration/testBlock.vim')
 vim.cmd('source ~/.config/nvim/spell/abbrev.vim')
 -- }}}
-
-
--- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: set foldmethod=marker: set foldlevel=0

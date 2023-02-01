@@ -29,12 +29,13 @@ if $TERM_PROGRAM =~ "iTerm"
     let &t_EI = "\<Esc>]50;CursorShape=0\x7" " Block in normal mode
 endif
 
-" easier source, flush
-if has('nvim')
-command! -nargs=0 Source :source ~/.config/nvim/init.vim
-else
-command -nargs=0 Source :source ~/.vimrc
-endif
+" " easier source, flush
+" if has('nvim')
+" command! -nargs=0 Source :source ~/.config/nvim/init.lua
+" else
+" command -nargs=0 Source :source ~/.vimrc
+" endif
+
 " command! -nargs=0 Flush :NERDTreeRefreshRoot | :CommandTFlush
 command! -nargs=0 Flush :NERDTreeRefreshRoot
 
