@@ -1,18 +1,49 @@
-" {{{ telescope
-" Find files using Telescope command-line sugar.
+" {{{ fzf
+let $FZF_DEFAULT_COMMAND = 'rg --files --hidden --no-ignore --glob "!.git/*" --glob "!changelog" --glob "!vendor"'
+if exists('g:neovide')
+    let $FZF_PREVIEW_COMMAND = 'highlight -O ansi --style=solarized-light -l {} || cat {}'
+else   
+    let $FZF_PREVIEW_COMMAND = 'highlight -O ansi -l {} || cat {}'
+endif
 
-" Using Lua functions
-nnoremap <leader>t <cmd>lua require('telescope.builtin').git_files()<cr>
+let g:fzf_preview_window = ['up:50%', 'ctrl-/']
 
-nnoremap <leader>T <cmd>lua require('telescope.builtin').find_files({find_command = {'rg', '--files', '--no-ignore', '--glob', '!*.class'}})<cr>
-nnoremap <leader>b <cmd>lua require('telescope.builtin').current_buffer_fuzzy_find({previewer=false})<cr>
-nnoremap z= <cmd>lua require('telescope.builtin').spell_suggest()<cr>
-nnoremap <leader>rb <cmd>lua require('telescope.builtin').buffers()<cr>
+" nmap <leader>b :BLines<CR>
+" nmap <leader>T :Files<CR>
+" nmap <leader>t :GFiles<CR>
+nmap <leader>rh :History<CR>
+" nmap <leader>rb :Buffers<CR>
 
+function! RipgrepFzf(query, fullscreen)
+  let command_fmt = 'rg --column --line-number --no-heading --color=always --smart-case --glob !"changelog" --glob "!vendor" -- %s || true'
+  let initial_command = printf(command_fmt, shellescape(a:query))
+  let reload_command = printf(command_fmt, '{q}')
+  let spec = {'options': ['--phony', '--query', a:query, '--bind', 'change:reload:'.reload_command]}
+  call fzf#vim#grep(initial_command, 1, fzf#vim#with_preview(spec), a:fullscreen)
+endfunction
 
+function! RipgrepFzfNoTest(query, fullscreen)
+  let command_fmt = 'rg --column --line-number --no-heading --color=always --smart-case --glob "!changelog" --glob "!vendor" --glob "!*_test.go" --glob "!*Test.java" -- %s || true'
+  let initial_command = printf(command_fmt, shellescape(a:query))
+  let reload_command = printf(command_fmt, '{q}')
+  let spec = {'options': ['--phony',  '--query', a:query, '--bind', 'change:reload:'.reload_command]}
+  call fzf#vim#grep(initial_command, 1, fzf#vim#with_preview(spec), a:fullscreen)
+endfunction
 
-" nnoremap <leader>fg <cmd>lua require('telescope.builtin').live_grep({vimgrep_arguments = { 'rg', '--color=never', '--no-heading', '--with-filename', '--line-number', '--column', '--smart-case', '-u' }})<cr>
-" nnoremap <leader>rh <cmd>lua require('telescope.builtin').oldfiles()<cr>
+command! -nargs=* -bang RGnotest call RipgrepFzfNoTest(<q-args>, <bang>0)
+nmap <leader>rg :RGnotest!<CR>
+vmap <leader>rg y:RGnotest! <C-r>0<CR>
+
+command! -nargs=* -bang RG call RipgrepFzf(<q-args>, <bang>0)
+nmap <leader>Rg :RG!<CR>
+vmap <leader>Rg y:RG! <C-r>0<CR>
+
+lua << EOF
+    local actions = require "fzf-lua.actions"
+    require'fzf-lua'.setup {
+    }
+EOF
+command! -nargs=0 Experiment :FzfLua live_grep
 
 " }}}
 " {{{ MultipleSearch

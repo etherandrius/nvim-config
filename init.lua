@@ -77,6 +77,9 @@ require('packer').startup(function(use)
   use 'ggandor/lightspeed.nvim' -- type where you look
   use { 'nvim-telescope/telescope.nvim', branch = '0.1.x', requires = { 'nvim-lua/plenary.nvim' } }
   use { 'nvim-telescope/telescope-fzf-native.nvim', run = 'make', cond = vim.fn.executable 'make' == 1 }
+  use { 'junegunn/fzf', run = './install --bin', }
+  use 'junegunn/fzf.vim'
+  use 'ibhagwan/fzf-lua'
 
 -- }}}
 --- packer setup {{{
@@ -113,126 +116,12 @@ vim.api.nvim_create_autocmd('BufWritePost', {
 })
 -- }}}
 -- [[Plugin Configuration]] {{{
--- [[ lualine ]] {{{
--- Set lualine as statusline
--- See `:help lualine.txt`
-require('lualine').setup {
-  options = {
-    icons_enabled = false,
-    theme = 'solarized',
-    component_separators = '|',
-    section_separators = '',
-  },
-}
--- }}}
--- [[ Comment ]] {{{
-require('Comment').setup()
--- }}}
--- [[ Configure Telescope ]] {{{
--- See `:help telescope` and `:help telescope.setup()`
-
-local utils = require('telescope.utils')
-local entry_display = require("telescope.pickers.entry_display")
-
-local custom_path_display = function(opts, path)
-    local name = utils.path_tail(path)
-    local path = path
-    local subtype = ""
-    if path:find('/java/com/palantir/') then
-        path = path:gsub("java/com/palantir/", "")
-    end
-    if path:find('/generated/') then
-        subtype = "gen "
-        path = path:gsub("/generated/", "/G/")
-    end
-    if path:find('/src/test/') then
-        subtype = "test"
-        path = path:gsub("/src/test/", "/T/")
-    end
-    if path:find('/src/main/') then
-        subtype = "src "
-        path = path:gsub("/src/main/", "/S/")
-    end
-    local displayer = entry_display.create({
-        separator = ' ▏',
-        items = {
-            { width = 55 },
-            { width = 5 },
-            { remaining = true },
-        },
-    })
-    return displayer({
-        name,
-        subtype,
-        path,
-    })
-end
-
-
-require('telescope').setup {
-  defaults = {
-      file_previewer = require('telescope.previewers').vim_buffer_cat.new
-  },
-
-  pickers = {
-      git_files = {
-          path_display = custom_path_display
-      },
-      find_files = {
-          path_display = custom_path_display
-      },
-      oldfiles = {
-          path_display = custom_path_display
-      },
-      live_grep = {
-          path_display = custom_path_display
-      },
-  },
-}
-
--- Enable telescope fzf native, if installed
-pcall(require('telescope').load_extension, 'fzf')
-
--- See `:help telescope.builtin`
-vim.keymap.set('n', '<leader>?', require('telescope.builtin').oldfiles, { desc = '[?] Find recently opened files' })
--- vim.keymap.set('n', '<leader>b', function()
---   -- You can pass additional configuration to telescope to change theme, layout, etc.
---   require('telescope.builtin').current_buffer_fuzzy_find(require('telescope.themes').get_dropdown {
---     winblend = 10,
---     previewer = false,
---   })
--- end, { desc = '[/] Fuzzily search in current buffer]' })
-
--- vim.keymap.set('n', '<leader>t', require('telescope.builtin').git_files, { desc = 'Search Git Files' })
--- vim.keymap.set('n', '<leader>T', require('telescope.builtin').find_files, { desc = 'Search ALL Files' })
-vim.keymap.set('n', '<leader>sh', require('telescope.builtin').help_tags, { desc = '[S]earch [H]elp' })
-vim.keymap.set('n', '<leader>sw', require('telescope.builtin').grep_string, { desc = '[S]earch current [W]ord' })
-vim.keymap.set('n', '<leader>rg', require('telescope.builtin').live_grep, { desc = '[S]earch by [G]rep' })
-vim.keymap.set('n', '<leader>sd', require('telescope.builtin').diagnostics, { desc = '[S]earch [D]iagnostics' })
-
--- }}}
--- [[ Configure Harpoon ]] {{{
-require("telescope").load_extension('harpoon')
-vim.keymap.set('n', '<leader>rm', require('harpoon.ui').toggle_quick_menu, { desc = 'Harpoon files' })
-
--- }}}
--- [[ Configure Treesitter ]] {{{
--- See `:help nvim-treesitter`
-require('nvim-treesitter.configs').setup {
-  -- Add languages to be installed here that you want installed for treesitter
-  ensure_installed = { 'java', 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'typescript', 'help', 'vim' },
-  highlight = {
-    enable = true,
-    additional_vim_regex_highlighting = false,
-  },
-}
---- }}}
 -- [[ LSP - keymaps ]] {{{
 -- Diagnostic keymaps
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev)
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next)
 vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float)
-vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist)
+vim.keymap.set('n', '<leader>q', vim.diagnostic.setqflist)
 
 -- LSP settings.
 --  This function gets run when an LSP connects to a particular buffer.
@@ -304,11 +193,174 @@ local servers = {
   },
 }
 -- }}}
--- [[ neodev ]] {{{
--- Setup neovim lua configuration 
-require('neodev').setup()
+-- [[ Lualine - statusline ]] {{{
+-- Set lualine as statusline
+-- See `:help lualine.txt`
+
+local isGeneratedFile = function ()
+    local path = vim.fn.expand("%:h")
+    if string.match(path, "generated") then
+        return "[G]"
+    end
+    return ""
+end
+
+local isDiffFile = function ()
+    local path = vim.fn.expand("%:h")
+    if string.match(path, "fugitive://") then
+        return "[Diff]"
+    end
+    return ""
+end
+
+local javaPath = function ()
+    local path = vim.fn.expand("%:h")
+    if path:len() == 0 then
+        return ""
+    end
+    if path:match("java/com/palantir/") then
+        path = path:gsub("java/com/palantir/", "J/")
+    end
+    if path:match("/generated/") then
+        path = path:gsub("/generated/", "/G/")
+    end
+    if path:match("/src/test/") then
+        path = path:gsub("/src/test/", "/T/")
+    end
+    if path:match("/src/main/") then
+        path = path:gsub("/src/main/", "/S/")
+    end
+    return "(" .. path .. ")"
+end
+
+require('lualine').setup {
+    options = {
+        icons_enabled = false,
+        theme = require('solarized-lualine'),
+        component_separators = '|',
+        section_separators = '',
+    },
+    sections = {
+        lualine_a = {'mode'},
+        lualine_b = {'branch', 'diagnostics'},
+        lualine_c = {javaPath, 'filename'},
+        lualine_x = {isGeneratedFile, isDiffFile, 'filetype'},
+        lualine_y = {'progress'},
+        lualine_z = {'location'}
+    },
+    inactive_sections = {
+        lualine_a = {},
+        lualine_b = {},
+        lualine_c = {javaPath, 'filename'},
+        lualine_x = {isGeneratedFile, isDiffFile},
+        lualine_y = {},
+        lualine_z = {}
+    },
+}
 -- }}}
--- [[ mason ]] {{{
+-- [[ Telescope ]] {{{
+-- See `:help telescope` and `:help telescope.setup()`
+
+local utils = require('telescope.utils')
+local entry_display = require("telescope.pickers.entry_display")
+
+local custom_path_display = function(_opts, path)
+    local name = utils.path_tail(path)
+    local path = path
+    local subtype = ""
+    if path:find('/java/com/palantir/') then
+        path = path:gsub("java/com/palantir/", "")
+    end
+    if path:find('/generated/') then
+        subtype = "gen "
+        path = path:gsub("/generated/", "/G/")
+    end
+    if path:find('/src/test/') then
+        subtype = "test"
+        path = path:gsub("/src/test/", "/T/")
+    end
+    if path:find('/src/main/') then
+        subtype = "src "
+        path = path:gsub("/src/main/", "/S/")
+    end
+    local displayer = entry_display.create({
+        separator = ' ▏',
+        items = {
+            { width = 55 },
+            { width = 5 },
+            { remaining = true },
+        },
+    })
+    return displayer({
+        name,
+        subtype,
+        path,
+    })
+end
+
+
+require('telescope').setup {
+  defaults = {
+      file_previewer = require('telescope.previewers').vim_buffer_cat.new
+  },
+
+  pickers = {
+      git_files = {
+          path_display = custom_path_display
+      },
+      find_files = {
+          path_display = custom_path_display
+      },
+      oldfiles = {
+          path_display = custom_path_display
+      },
+      live_grep = {
+          path_display = custom_path_display
+      },
+  },
+}
+
+-- Enable telescope fzf native, if installed
+pcall(require('telescope').load_extension, 'fzf')
+
+-- See `:help telescope.builtin`
+vim.keymap.set('n', '<leader>rh', require('telescope.builtin').oldfiles, { desc = '[R]ecent [H]istory old files' })
+vim.keymap.set('n', '<leader>b',require('telescope.builtin').current_buffer_fuzzy_find, { desc = '[B] Fuzzily search in current buffer]' })
+vim.keymap.set('n', 'z=',require('telescope.builtin').spell_suggest, { desc = 'Spell suggestions' })
+
+vim.keymap.set('n', '<leader>t', require('telescope.builtin').git_files, { desc = 'Search Git Files' })
+vim.keymap.set('n', '<leader>T', require('telescope.builtin').find_files, { desc = 'Search ALL Files' })
+-- nnoremap <leader>T <cmd>lua require('telescope.builtin').find_files({find_command = {'rg', '--files', '--no-ignore', '--glob', '!*.class'}})<cr>
+vim.keymap.set('n', '<leader>sh', require('telescope.builtin').help_tags, { desc = '[S]earch [H]elp' })
+
+local findFilesForWordUnderCursor = function ()
+    local word = vim.fn.expand "<cword>"
+    require('telescope.builtin').find_files({
+        grep_open_files = true,
+        search_file = word
+    })
+end
+vim.keymap.set('n', '<leader>sf', findFilesForWordUnderCursor, { desc = '[S]earch current [F]ile' })
+
+vim.keymap.set('n', '<leader>sw', require('telescope.builtin').grep_string, {
+    desc = '[S]earch current [W]ord'
+})
+-- vim.keymap.set('n', '<leader>rg', require('telescope.builtin').live_grep, { desc = '[S]earch by [G]rep' })
+vim.keymap.set('n', '<leader>sd', require('telescope.builtin').diagnostics, { desc = '[S]earch [D]iagnostics' })
+
+-- }}}
+-- [[ Treesitter ]] {{{
+-- See `:help nvim-treesitter`
+require('nvim-treesitter.configs').setup {
+  -- Add languages to be installed here that you want installed for treesitter
+  ensure_installed = { 'java', 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'typescript', 'help', 'vim' },
+  highlight = {
+    enable = true,
+    additional_vim_regex_highlighting = false,
+  },
+}
+--- }}}
+-- [[ Mason ]] {{{
 -- [ nvim-cmp {{{
 -- nvim-cmp supports additional completion capabilities, so broadcast that to servers
 local capabilities = vim.lsp.protocol.make_client_capabilities()
@@ -335,11 +387,7 @@ mason_lspconfig.setup_handlers {
   end,
 }
 -- }}}
--- [[ fidget ]] {{{
--- Turn on lsp status information
-require('fidget').setup()
--- }}}
--- [[ nvim-cmp setup ]] {{{
+-- [[ nvim-cmp ]] {{{
 local cmp = require 'cmp'
 local luasnip = require 'luasnip'
 
@@ -352,7 +400,7 @@ cmp.setup {
   mapping = cmp.mapping.preset.insert {
     ['<C-d>'] = cmp.mapping.scroll_docs(-4),
     ['<C-f>'] = cmp.mapping.scroll_docs(4),
-    ['<C-Space>'] = cmp.mapping.complete(),
+    ['<C-Space>'] = cmp.mapping.complete({}),
     ['<CR>'] = cmp.mapping.confirm {
       behavior = cmp.ConfirmBehavior.Replace,
       select = true,
@@ -382,6 +430,15 @@ cmp.setup {
   },
 }
 -- }}}
+-- [[ Harpoon ]] {{{
+require("telescope").load_extension('harpoon')
+vim.keymap.set('n', '<leader>rm', require('harpoon.ui').toggle_quick_menu, { desc = 'Harpoon files' })
+-- }}}
+-- Simple Setups {{{
+require('Comment').setup()
+require('neodev').setup()
+require('fidget').setup()
+-- }}}
 
 vim.cmd('source ~/.config/nvim/lua-migration/plugins.vim')
 -- }}}
@@ -406,17 +463,6 @@ vim.cmd('source ~/.config/nvim/lua-migration/keymaps.vim')
 -- }}}
 
 -- [[ Random ]] {{{
--- [[ Highlight on yank ]] {{{
--- See `:help vim.highlight.on_yank()`
-local highlight_group = vim.api.nvim_create_augroup('YankHighlight', { clear = true })
-vim.api.nvim_create_autocmd('TextYankPost', {
-  callback = function()
-    vim.highlight.on_yank()
-  end,
-  group = highlight_group,
-  pattern = '*',
-})
--- }}}
 vim.cmd('source ~/.config/nvim/lua-migration/testBlock.vim')
 vim.cmd('source ~/.config/nvim/spell/abbrev.vim')
 -- }}}
