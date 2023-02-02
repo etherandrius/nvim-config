@@ -84,6 +84,11 @@ _G.packer_plugins = {
     path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/LuaSnip",
     url = "https://github.com/L3MON4D3/LuaSnip"
   },
+  MultipleSearch = {
+    loaded = true,
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/MultipleSearch",
+    url = "https://github.com/vim-scripts/MultipleSearch"
+  },
   ["cmp-nvim-lsp"] = {
     loaded = true,
     path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/cmp-nvim-lsp",
@@ -99,15 +104,30 @@ _G.packer_plugins = {
     path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/fidget.nvim",
     url = "https://github.com/j-hui/fidget.nvim"
   },
-  ["gitsigns.nvim"] = {
+  fzf = {
     loaded = true,
-    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/gitsigns.nvim",
-    url = "https://github.com/lewis6991/gitsigns.nvim"
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/fzf",
+    url = "https://github.com/junegunn/fzf"
   },
-  ["indent-blankline.nvim"] = {
+  ["fzf-lua"] = {
     loaded = true,
-    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/indent-blankline.nvim",
-    url = "https://github.com/lukas-reineke/indent-blankline.nvim"
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/fzf-lua",
+    url = "https://github.com/ibhagwan/fzf-lua"
+  },
+  ["fzf.vim"] = {
+    loaded = true,
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/fzf.vim",
+    url = "https://github.com/junegunn/fzf.vim"
+  },
+  harpoon = {
+    loaded = true,
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/harpoon",
+    url = "https://github.com/ThePrimeagen/harpoon"
+  },
+  ["lightspeed.nvim"] = {
+    loaded = true,
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/lightspeed.nvim",
+    url = "https://github.com/ggandor/lightspeed.nvim"
   },
   ["lualine.nvim"] = {
     loaded = true,
@@ -128,6 +148,11 @@ _G.packer_plugins = {
     loaded = true,
     path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/neodev.nvim",
     url = "https://github.com/folke/neodev.nvim"
+  },
+  nerdtree = {
+    loaded = true,
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/nerdtree",
+    url = "https://github.com/scrooloose/nerdtree"
   },
   ["nvim-cmp"] = {
     loaded = true,
@@ -151,20 +176,25 @@ _G.packer_plugins = {
     path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/opt/nvim-treesitter-textobjects",
     url = "https://github.com/nvim-treesitter/nvim-treesitter-textobjects"
   },
-  ["onedark.nvim"] = {
-    loaded = true,
-    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/onedark.nvim",
-    url = "https://github.com/navarasu/onedark.nvim"
-  },
   ["packer.nvim"] = {
     loaded = true,
     path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/packer.nvim",
     url = "https://github.com/wbthomason/packer.nvim"
   },
+  playground = {
+    loaded = true,
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/playground",
+    url = "https://github.com/nvim-treesitter/playground"
+  },
   ["plenary.nvim"] = {
     loaded = true,
     path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/plenary.nvim",
     url = "https://github.com/nvim-lua/plenary.nvim"
+  },
+  ["taboo.vim"] = {
+    loaded = true,
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/taboo.vim",
+    url = "https://github.com/gcmt/taboo.vim"
   },
   ["telescope-fzf-native.nvim"] = {
     cond = { true },
@@ -179,20 +209,65 @@ _G.packer_plugins = {
     path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/telescope.nvim",
     url = "https://github.com/nvim-telescope/telescope.nvim"
   },
+  ["vim-abolish"] = {
+    loaded = true,
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/vim-abolish",
+    url = "https://github.com/tpope/vim-abolish"
+  },
+  ["vim-autoread"] = {
+    loaded = true,
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/vim-autoread",
+    url = "https://github.com/djoshea/vim-autoread"
+  },
+  ["vim-brightest"] = {
+    loaded = true,
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/vim-brightest",
+    url = "https://github.com/osyo-manga/vim-brightest"
+  },
   ["vim-fugitive"] = {
     loaded = true,
     path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/vim-fugitive",
     url = "https://github.com/tpope/vim-fugitive"
+  },
+  ["vim-indent-object"] = {
+    loaded = true,
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/vim-indent-object",
+    url = "https://github.com/michaeljsmith/vim-indent-object"
+  },
+  ["vim-log-highlighting"] = {
+    loaded = true,
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/vim-log-highlighting",
+    url = "https://github.com/mtdl9/vim-log-highlighting"
+  },
+  ["vim-qf"] = {
+    loaded = true,
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/vim-qf",
+    url = "https://github.com/romainl/vim-qf"
   },
   ["vim-rhubarb"] = {
     loaded = true,
     path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/vim-rhubarb",
     url = "https://github.com/tpope/vim-rhubarb"
   },
+  ["vim-ripgrep"] = {
+    loaded = true,
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/vim-ripgrep",
+    url = "https://github.com/jremmen/vim-ripgrep"
+  },
+  ["vim-signature"] = {
+    loaded = true,
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/vim-signature",
+    url = "https://github.com/kshenoy/vim-signature"
+  },
   ["vim-sleuth"] = {
     loaded = true,
     path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/vim-sleuth",
     url = "https://github.com/tpope/vim-sleuth"
+  },
+  ["vim-speeddating"] = {
+    loaded = true,
+    path = "/Users/agrabauskas/.local/share/nvim/site/pack/packer/start/vim-speeddating",
+    url = "https://github.com/tpope/vim-speeddating"
   }
 }
 

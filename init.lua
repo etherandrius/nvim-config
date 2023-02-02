@@ -1,6 +1,5 @@
 -- vim.cmd('source ~/.vim/vimrc')
 
---  NOTE: Must happen before plugins are required (otherwise wrong leader will be used)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 vim.cmd('source ~/.config/nvim/lua-migration/color.vim')
@@ -35,19 +34,6 @@ require('packer').startup(function(use)
     requires = { 'hrsh7th/cmp-nvim-lsp', 'L3MON4D3/LuaSnip', 'saadparwaiz1/cmp_luasnip' },
   }
 
-  use { -- Highlight, edit, and navigate code
-    'nvim-treesitter/nvim-treesitter',
-    'nvim-treesitter/playground',
-    run = function()
-      pcall(require('nvim-treesitter.install').update { with_sync = true })
-    end,
-  }
-
-  use { -- Additional text objects via treesitter
-    'nvim-treesitter/nvim-treesitter-textobjects',
-    after = 'nvim-treesitter',
-  }
-
   -- qol
   use 'tpope/vim-rhubarb' -- for fugitive for enterprise github
   use 'tpope/vim-fugitive' -- essential
@@ -65,11 +51,21 @@ require('packer').startup(function(use)
   use 'vim-scripts/MultipleSearch' -- Highlight multiple words at the same time
   use 'kshenoy/vim-signature' -- shows marks
   use 'mtdl9/vim-log-highlighting' -- syntax for log files
+  use { -- Highlight, edit, and navigate code
+    'nvim-treesitter/nvim-treesitter',
+    'nvim-treesitter/playground',
+    run = function()
+      pcall(require('nvim-treesitter.install').update { with_sync = true })
+    end,
+  }
 
   -- text objects
-  use 'wellle/targets.vim' -- 
   use 'michaeljsmith/vim-indent-object'
   use 'numToStr/Comment.nvim' -- "gc" to comment visual regions/lines
+  use {
+    'nvim-treesitter/nvim-treesitter-textobjects',
+    after = 'nvim-treesitter',
+  }
 
   -- navigation
   use 'jremmen/vim-ripgrep'
@@ -121,7 +117,16 @@ vim.api.nvim_create_autocmd('BufWritePost', {
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev)
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next)
 vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float)
-vim.keymap.set('n', '<leader>q', vim.diagnostic.setqflist)
+vim.keymap.set('n', '<leader>qe', function ()
+    return vim.diagnostic.setqflist({
+        severity = vim.diagnostic.severity.ERROR
+    })
+end, { desc = "LSP Errors"})
+vim.keymap.set('n', '<leader>qw', function ()
+    return vim.diagnostic.setqflist({
+        severity = { vim.diagnostic.severity.WARN, vim.diagnostic.severity.HINT, vim.diagnostic.severity.INFO }
+    })
+end, { desc = "LSP Warnings / Info / Hints"})
 
 -- LSP settings.
 --  This function gets run when an LSP connects to a particular buffer.
@@ -218,6 +223,9 @@ local javaPath = function ()
     if path:len() == 0 then
         return ""
     end
+    if path:match("/Users/agrabauskas/Projects/java/foundry") then
+        path = path:gsub("/Users/agrabauskas/Projects/java/foundry", "")
+    end
     if path:match("java/com/palantir/") then
         path = path:gsub("java/com/palantir/", "J/")
     end
@@ -242,7 +250,17 @@ require('lualine').setup {
     },
     sections = {
         lualine_a = {'mode'},
-        lualine_b = {'branch', 'diagnostics'},
+        lualine_b = {
+            'branch',
+            {
+                'diff',
+                diff_color = {
+                  added = { fg = 2 },
+                  modified = { fg = 3 },
+                  removed = { fg = 1 },
+                }
+            },
+            'diagnostics'},
         lualine_c = {javaPath, 'filename'},
         lualine_x = {isGeneratedFile, isDiffFile, 'filetype'},
         lualine_y = {'progress'},
@@ -256,6 +274,17 @@ require('lualine').setup {
         lualine_y = {},
         lualine_z = {}
     },
+    diff_color = {
+        added = {
+          fg = 0,
+        },
+        modified = {
+          fg = 0,
+        },
+        removed = {
+          fg = 0,
+        },
+    }
 }
 -- }}}
 -- [[ Telescope ]] {{{
@@ -358,6 +387,26 @@ require('nvim-treesitter.configs').setup {
     enable = true,
     additional_vim_regex_highlighting = false,
   },
+  textobjects = {
+    select = {
+      enable = true,
+      lookahead = true,
+      keymaps = {
+        ["af"] = "@function.outer",
+        ["if"] = "@function.inner",
+        ["ia"] = "@parameter.inner",
+        ["aa"] = "@parameter.outer",
+      },
+      include_surrounding_whitespace = function (table)
+        local blockList = { 
+            ["@parameter.inner"] = true,
+            ["@parameter.outer"] = true,
+            ["@function.inner"] = true,
+        }
+        return not blockList[table["query_string"]]
+    end
+    },
+  },
 }
 --- }}}
 -- [[ Mason ]] {{{
@@ -401,10 +450,6 @@ cmp.setup {
     ['<C-d>'] = cmp.mapping.scroll_docs(-4),
     ['<C-f>'] = cmp.mapping.scroll_docs(4),
     ['<C-Space>'] = cmp.mapping.complete({}),
-    ['<CR>'] = cmp.mapping.confirm {
-      behavior = cmp.ConfirmBehavior.Replace,
-      select = true,
-    },
     ['<Tab>'] = cmp.mapping(function(fallback)
       if cmp.visible() then
         cmp.select_next_item()

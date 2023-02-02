@@ -41,22 +41,22 @@ local colors = function (colors)
   return {
     normal = {
       a = { fg = colors.base03, bg = colors.blue, gui = 'bold' },
-      b = { fg = colors.base03, bg = colors.base1 },
+      b = { fg = colors.base3, bg = colors.base03 },
       c = { fg = colors.base03, bg = colors.blue },
     },
     insert = {
       a = { fg = colors.base03, bg = colors.green, gui = 'bold' },
-      b = { fg = colors.base03, bg = colors.base1 },
+      b = { fg = colors.base3, bg = colors.base03 },
       c = { fg = colors.base03, bg = colors.green },
     },
     visual = {
       a = { fg = colors.base03, bg = colors.magenta, gui = 'bold' },
-      b = { fg = colors.base03, bg = colors.base1 },
+      b = { fg = colors.base3, bg = colors.base03 },
       c = { fg = colors.base03, bg = colors.magenta },
     },
     replace = {
       a = { fg = colors.base03, bg = colors.red, gui = 'bold' },
-      b = { fg = colors.base03, bg = colors.base1 },
+      b = { fg = colors.base3, bg = colors.base03 },
       c = { fg = colors.base03, bg = colors.red },
     },
     inactive = {

@@ -81,11 +81,6 @@ hi BrightestCustom cterm=bold,underline ctermfg=DarkGrey guifg=Blue guibg=Yellow
 let g:brightest#highlight = {"group" : "BrightestCustom"}
 
 " }}}
-" {{{ targets
-" I don't know what the below mappings mean but they make argument targets more comfortable
-let g:targets_seekRanges = 'cc cr cb cB lc ac Ac lr lb ar ab lB Ar aB Ab AB rr ll rb al rB Al bb aa bB Aa BB AA'
-let g:targets_aiAI = 'aIAi'
-" }}}
 " {{{ harpoon
 
 " nnoremap <leader>rm :Telescope harpoon marks theme=dropdown width=160<cr>
