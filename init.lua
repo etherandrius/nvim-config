@@ -117,6 +117,16 @@ vim.api.nvim_create_autocmd('BufWritePost', {
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev)
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next)
 vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float)
+vim.keymap.set('n', 'ge', function ()
+    return vim.diagnostic.goto_next({
+        severity = vim.diagnostic.severity.ERROR
+    })
+end)
+vim.keymap.set('n', 'gE', function ()
+    return vim.diagnostic.goto_prev({
+        severity = vim.diagnostic.severity.ERROR
+    })
+end)
 vim.keymap.set('n', '<leader>qe', function ()
     return vim.diagnostic.setqflist({
         severity = vim.diagnostic.severity.ERROR
@@ -128,15 +138,7 @@ vim.keymap.set('n', '<leader>qw', function ()
     })
 end, { desc = "LSP Warnings / Info / Hints"})
 
--- LSP settings.
---  This function gets run when an LSP connects to a particular buffer.
 local on_attach = function(_, bufnr)
-  -- NOTE: Remember that lua is a real programming language, and as such it is possible
-  -- to define small helper and utility functions so you don't have to repeat yourself
-  -- many times.
-  --
-  -- In this case, we create a function that lets us more easily define mappings specific
-  -- for LSP related items. It sets the mode, buffer and description for us each time.
   local nmap = function(keys, func, desc)
     if desc then
       desc = 'LSP: ' .. desc
@@ -398,7 +400,7 @@ require('nvim-treesitter.configs').setup {
         ["aa"] = "@parameter.outer",
       },
       include_surrounding_whitespace = function (table)
-        local blockList = { 
+        local blockList = {
             ["@parameter.inner"] = true,
             ["@parameter.outer"] = true,
             ["@function.inner"] = true,
