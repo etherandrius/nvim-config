@@ -73,9 +73,6 @@ require('packer').startup(function(use)
   use 'ggandor/lightspeed.nvim' -- type where you look
   use { 'nvim-telescope/telescope.nvim', branch = '0.1.x', requires = { 'nvim-lua/plenary.nvim' } }
   use { 'nvim-telescope/telescope-fzf-native.nvim', run = 'make', cond = vim.fn.executable 'make' == 1 }
-  use { 'junegunn/fzf', run = './install --bin', }
-  use 'junegunn/fzf.vim'
-  use 'ibhagwan/fzf-lua'
 
 -- }}}
 --- packer setup {{{
@@ -345,6 +342,12 @@ require('telescope').setup {
       oldfiles = {
           path_display = custom_path_display
       },
+      lsp_references = {
+          path_display = custom_path_display
+      },
+      grep_string = {
+          path_display = custom_path_display
+      },
       live_grep = {
           path_display = custom_path_display
       },
@@ -360,7 +363,12 @@ vim.keymap.set('n', '<leader>b',require('telescope.builtin').current_buffer_fuzz
 vim.keymap.set('n', 'z=',require('telescope.builtin').spell_suggest, { desc = 'Spell suggestions' })
 
 vim.keymap.set('n', '<leader>t', require('telescope.builtin').git_files, { desc = 'Search Git Files' })
-vim.keymap.set('n', '<leader>T', require('telescope.builtin').find_files, { desc = 'Search ALL Files' })
+vim.keymap.set('n', '<leader>T', function ()
+    return require('telescope.builtin').find_files({
+        no_ignore = true,
+    })
+end
+, { desc = 'Search ALL Files' })
 -- nnoremap <leader>T <cmd>lua require('telescope.builtin').find_files({find_command = {'rg', '--files', '--no-ignore', '--glob', '!*.class'}})<cr>
 vim.keymap.set('n', '<leader>sh', require('telescope.builtin').help_tags, { desc = '[S]earch [H]elp' })
 
@@ -368,7 +376,8 @@ local findFilesForWordUnderCursor = function ()
     local word = vim.fn.expand "<cword>"
     require('telescope.builtin').find_files({
         grep_open_files = true,
-        search_file = word
+        search_file = word,
+        no_ignore = true,
     })
 end
 vim.keymap.set('n', '<leader>sf', findFilesForWordUnderCursor, { desc = '[S]earch current [F]ile' })
@@ -376,7 +385,55 @@ vim.keymap.set('n', '<leader>sf', findFilesForWordUnderCursor, { desc = '[S]earc
 vim.keymap.set('n', '<leader>sw', require('telescope.builtin').grep_string, {
     desc = '[S]earch current [W]ord'
 })
--- vim.keymap.set('n', '<leader>rg', require('telescope.builtin').live_grep, { desc = '[S]earch by [G]rep' })
+
+vim.keymap.set('v', '<leader>rg', function ()
+    vim.cmd("normal v")
+    local visual_selection = string.sub(vim.fn.getline("'<"), vim.fn.col("'<"), vim.fn.col("'>"))
+    return require('telescope.builtin').live_grep({
+        default_text = visual_selection,
+        glob = {
+            "!changelog",
+            "!vendor",
+            "!*_test.go",
+            "!*Test.java",
+        }
+    })
+end
+, { desc = '[S]earch source using [G]rep' })
+vim.keymap.set('v', '<leader>Rg', function ()
+    vim.cmd("normal v")
+    local visual_selection = string.sub(vim.fn.getline("'<"), vim.fn.col("'<"), vim.fn.col("'>"))
+    return require('telescope.builtin').live_grep({
+        default_text = visual_selection,
+        glob = {
+            "!changelog",
+            "!vendor",
+        }
+    })
+end
+, { desc = '[S]earch all files using [G]rep' })
+
+vim.keymap.set('n', '<leader>rg', function ()
+    return require('telescope.builtin').live_grep({
+        glob = {
+            "!changelog",
+            "!vendor",
+            "!*_test.go",
+            "!*Test.java",
+        }
+    })
+end
+, { desc = '[S]earch source using [G]rep' })
+vim.keymap.set('n', '<leader>Rg', function ()
+    return require('telescope.builtin').live_grep({
+        glob = {
+            "!changelog",
+            "!vendor",
+        }
+    })
+end
+, { desc = '[S]earch all files using [G]rep' })
+
 vim.keymap.set('n', '<leader>sd', require('telescope.builtin').diagnostics, { desc = '[S]earch [D]iagnostics' })
 
 -- }}}
