@@ -33,15 +33,6 @@ hi BrightestCustom cterm=bold,underline ctermfg=DarkGrey guifg=Blue guibg=Yellow
 let g:brightest#highlight = {"group" : "BrightestCustom"}
 
 " }}}
-" {{{ harpoon
-
-" nnoremap <leader>rm :Telescope harpoon marks theme=dropdown width=160<cr>
-command! -nargs=0 HarpoonAddFile :lua require("harpoon.mark").add_file()
-command! -nargs=0 HarpoonList :lua require("harpoon.ui").toggle_quick_menu()
-
-hi! link HarpoonWindow Normal
-hi! link HarpoonBorder Normal
-" }}}
 " {{{ vim-fugitive rhubarb
 let g:github_enterprise_urls = ['https://github.palantir.build']
 " }}}

@@ -19,7 +19,8 @@ require('packer').startup(function(use)
   -- Package manager
   use 'wbthomason/packer.nvim'
 
-  use { -- LSP Configuration & Plugins
+  -- LSP Configuration & Plugins
+  use {
     'neovim/nvim-lspconfig',
     requires = {
       'williamboman/mason.nvim', -- Automatically install LSPs to stdpath for neovim
@@ -535,8 +536,21 @@ cmp.setup {
 }
 -- }}}
 -- [[ Harpoon ]] {{{
+
 require("telescope").load_extension('harpoon')
 vim.keymap.set('n', '<leader>rm', require('harpoon.ui').toggle_quick_menu, { desc = 'Harpoon files' })
+vim.api.nvim_create_user_command('HarpoonAddFile', require('harpoon.mark').add_file, {})
+vim.api.nvim_create_user_command('HarpoonList', require('harpoon.ui').toggle_quick_menu, {})
+
+vim.cmd("hi! link HarpoonWindow Normal")
+vim.cmd("hi! link HarpoonBorder Normal")
+
+require("harpoon").setup({
+    menu = {
+        width = math.min(vim.api.nvim_win_get_width(0) - 10, 120),
+    }
+})
+
 -- }}}
 -- Simple Setups {{{
 require('Comment').setup()
