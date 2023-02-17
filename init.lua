@@ -539,15 +539,20 @@ cmp.setup {
 
 require("telescope").load_extension('harpoon')
 vim.keymap.set('n', '<leader>rm', require('harpoon.ui').toggle_quick_menu, { desc = 'Harpoon files' })
-vim.api.nvim_create_user_command('HarpoonAddFile', require('harpoon.mark').add_file, {})
-vim.api.nvim_create_user_command('HarpoonList', require('harpoon.ui').toggle_quick_menu, {})
+vim.api.nvim_create_user_command('HarpoonAddFile', function() 
+    return require('harpoon.mark').add_file()
+end, {})
+vim.api.nvim_create_user_command('HarpoonList', function() 
+    return require('harpoon.ui').toggle_quick_menu()
+end
+    , {})
 
 vim.cmd("hi! link HarpoonWindow Normal")
 vim.cmd("hi! link HarpoonBorder Normal")
 
 require("harpoon").setup({
     menu = {
-        width = math.min(vim.api.nvim_win_get_width(0) - 10, 120),
+        width = math.min(vim.api.nvim_win_get_width(0) - 10, 180),
     }
 })
 
