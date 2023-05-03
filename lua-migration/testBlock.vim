@@ -45,6 +45,14 @@ command! -nargs=0 FoldOpenAll :norm zR
 command! -nargs=0 FoldCloseAllOther :norm zMa<ESC>
 " }}}
 
+function! SynStack()
+  if !exists("*synstack")
+    return
+  endif
+  echo map(synstack(line('.'), col('.')), 'synIDattr(v:val, "name")')
+endfunc
+
+
 " }}}
 " Test {{{
 

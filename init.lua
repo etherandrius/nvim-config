@@ -180,22 +180,20 @@ end
 --  the `settings` field of the server config. You must look up that documentation yourself.
 local servers = {
   gopls = {},
-  pyright = {},
   rust_analyzer = {},
-  tsserver = {},
   jdtls = {
       java = { completion = { importOrder = {} } },
   },
 
-  sumneko_lua = {
-    Lua = {
-      workspace = { checkThirdParty = false },
-      telemetry = { enable = false },
-      diagnostics = {
-          globals = { 'vim' }
-      }
-    },
-  },
+  -- sumneko_lua = {
+  --   Lua = {
+  --     workspace = { checkThirdParty = false },
+  --     telemetry = { enable = false },
+  --     diagnostics = {
+  --         globals = { 'vim' }
+  --     }
+  --   },
+  -- },
 }
 -- }}}
 -- [[ Lualine - statusline ]] {{{
@@ -383,6 +381,16 @@ local findFilesForWordUnderCursor = function ()
 end
 vim.keymap.set('n', '<leader>sf', findFilesForWordUnderCursor, { desc = '[S]earch current [F]ile' })
 
+local findFilesForWordUnderCursor = function ()
+    local word = vim.fn.expand "<cword>"
+    require('telescope.builtin').find_files({
+        grep_open_files = true,
+        search_file = word,
+        no_ignore = false,
+    })
+end
+vim.keymap.set('n', '<leader>sF', findFilesForWordUnderCursor, { desc = '[S]earch current [F]ile' })
+
 vim.keymap.set('n', '<leader>sw', require('telescope.builtin').grep_string, {
     desc = '[S]earch current [W]ord'
 })
@@ -510,7 +518,7 @@ cmp.setup {
     ['<C-d>'] = cmp.mapping.scroll_docs(-4),
     ['<C-f>'] = cmp.mapping.scroll_docs(4),
     ['<C-Space>'] = cmp.mapping.complete({}),
-    ['<Tab>'] = cmp.mapping(function(fallback)
+    ['<C-n>'] = cmp.mapping(function(fallback)
       if cmp.visible() then
         cmp.select_next_item()
       elseif luasnip.expand_or_jumpable() then
@@ -519,7 +527,7 @@ cmp.setup {
         fallback()
       end
     end, { 'i', 's' }),
-    ['<S-Tab>'] = cmp.mapping(function(fallback)
+    ['<C-p>'] = cmp.mapping(function(fallback)
       if cmp.visible() then
         cmp.select_prev_item()
       elseif luasnip.jumpable(-1) then
