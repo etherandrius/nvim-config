@@ -44,14 +44,28 @@ require('packer').startup(function(use)
   use 'gcmt/taboo.vim' -- :TabooRename to rename tabs
   use 'scrooloose/nerdtree' -- TODO replace this one day
   use 'romainl/vim-qf' -- quickfix options
-  use 'tpope/vim-sleuth' -- Detect tabstop and shiftwidth automatically
   use 'nvim-lualine/lualine.nvim' -- Fancier statusline
+  use {
+    "zbirenbaum/copilot.lua",
+    cmd = "Copilot",
+    event = "InsertEnter",
+    config = function()
+      require("copilot").setup({})
+    end,
+  }
+  use {
+    "zbirenbaum/copilot-cmp",
+    after = { "copilot.lua" },
+    config = function ()
+      require("copilot_cmp").setup()
+    end
+  }
+
 
   -- visual
   use 'osyo-manga/vim-brightest' -- highlights current word in red
   use 'vim-scripts/MultipleSearch' -- Highlight multiple words at the same time
   use 'kshenoy/vim-signature' -- shows marks
-  use 'mtdl9/vim-log-highlighting' -- syntax for log files
   use { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     'nvim-treesitter/playground',
@@ -100,7 +114,6 @@ if is_bootstrap then
   print '=================================='
   return
 end
-
 -- Automatically source and re-compile packer whenever you save this init.lua
 local packer_group = vim.api.nvim_create_augroup('Packer', { clear = true })
 vim.api.nvim_create_autocmd('BufWritePost', {
@@ -504,9 +517,20 @@ mason_lspconfig.setup_handlers {
   end,
 }
 -- }}}
+-- [[ Copilot ]] {{{
+-- require("copilot").setup({
+--   suggestion = { enabled = false },
+--   panel = { enabled = false },
+-- })
+-- }}}
 -- [[ nvim-cmp ]] {{{
 local cmp = require 'cmp'
 local luasnip = require 'luasnip'
+local has_words_before = function()
+  if vim.api.nvim_buf_get_option(0, "buftype") == "prompt" then return false end
+  local line, col = unpack(vim.api.nvim_win_get_cursor(0))
+  return col ~= 0 and vim.api.nvim_buf_get_text(0, line-1, 0, line-1, col, {})[1]:match("^%s*$") == nil
+end
 
 cmp.setup {
   snippet = {
@@ -515,31 +539,17 @@ cmp.setup {
     end,
   },
   mapping = cmp.mapping.preset.insert {
-    ['<C-d>'] = cmp.mapping.scroll_docs(-4),
-    ['<C-f>'] = cmp.mapping.scroll_docs(4),
-    ['<C-Space>'] = cmp.mapping.complete({}),
-    ['<C-n>'] = cmp.mapping(function(fallback)
-      if cmp.visible() then
-        cmp.select_next_item()
-      elseif luasnip.expand_or_jumpable() then
-        luasnip.expand_or_jump()
-      else
-        fallback()
-      end
-    end, { 'i', 's' }),
-    ['<C-p>'] = cmp.mapping(function(fallback)
-      if cmp.visible() then
-        cmp.select_prev_item()
-      elseif luasnip.jumpable(-1) then
-        luasnip.jump(-1)
-      else
-        fallback()
-      end
-    end, { 'i', 's' }),
+    ["<CR>"] = cmp.mapping.confirm({
+      -- this is the important line
+      behavior = cmp.ConfirmBehavior.Replace,
+      select = false,
+    }),
+    ['<C-e>'] = cmp.mapping.abort(),
   },
   sources = {
-    { name = 'nvim_lsp' },
-    { name = 'luasnip' },
+    { name = "copilot", group_index = 1 },
+    { name = 'nvim_lsp', group_index = 1 },
+    { name = 'luasnip', group_index = 2 },
   },
 }
 -- }}}

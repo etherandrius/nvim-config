@@ -29,6 +29,7 @@ let NERDTreeShowHidden=1
     let g:netrw_altfile = 1
 " }}}
 " {{{ brightest
+
 hi BrightestCustom cterm=bold,underline ctermfg=DarkGrey guifg=Blue guibg=Yellow
 let g:brightest#highlight = {"group" : "BrightestCustom"}
 

@@ -5,11 +5,13 @@ nmap gf ]]<ESC>V/\%V[a-zA-Z](<CR><ESC>:noh<CR>B
 nmap gF k[[<ESC>V/\%V[a-zA-Z](<CR><ESC>:noh<CR>B
 
 " (aagg) Wed Feb 19 16:45:52 GMT 2020
-nmap <C-n> :cn<CR>
-nmap <C-p> :cp<CR>
+" deleted Fri May  5 17:22:43 BST 2023
+" nmap <C-n> :cn<CR>
+" nmap <C-p> :cp<CR>
 " (aagg) Wed 16 Dec 2020 15:11:24 GMT
-nmap <C-N> :cn<CR>zz
-nmap <C-P> :cp<CR>zz
+" deleted Fri May  5 17:22:43 BST 2023
+" nmap <C-N> :cn<CR>zz
+" nmap <C-P> :cp<CR>zz
 
 " stay in the Visual mode when using shift commands
 xnoremap < <gv

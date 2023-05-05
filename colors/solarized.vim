@@ -225,7 +225,7 @@ call s:SetOption("menu",1)
 "}}}
 " Colorscheme initialization "{{{
 " ---------------------------------------------------------------------
-hi clear
+" hi clear 
 if exists("syntax_on")
   syntax reset
 endif
