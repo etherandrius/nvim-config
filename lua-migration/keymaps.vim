@@ -4,14 +4,12 @@ nmap Q <Nop>
 nmap gf ]]<ESC>V/\%V[a-zA-Z](<CR><ESC>:noh<CR>B
 nmap gF k[[<ESC>V/\%V[a-zA-Z](<CR><ESC>:noh<CR>B
 
-" (aagg) Wed Feb 19 16:45:52 GMT 2020
-" deleted Fri May  5 17:22:43 BST 2023
-" nmap <C-n> :cn<CR>
-" nmap <C-p> :cp<CR>
-" (aagg) Wed 16 Dec 2020 15:11:24 GMT
-" deleted Fri May  5 17:22:43 BST 2023
-" nmap <C-N> :cn<CR>zz
-" nmap <C-P> :cp<CR>zz
+" (aagg) Wed Feb Wed May 31 22:37:23 BST 2023
+" These are needed here for quickfix file navigation
+nmap <C-n> :cn<CR>
+nmap <C-p> :cp<CR>
+nmap <C-N> :cn<CR>zz
+nmap <C-P> :cp<CR>zz
 
 " stay in the Visual mode when using shift commands
 xnoremap < <gv

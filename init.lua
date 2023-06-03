@@ -32,7 +32,10 @@ require('packer').startup(function(use)
 
   use { -- Autocompletion
     'hrsh7th/nvim-cmp',
-    requires = { 'hrsh7th/cmp-nvim-lsp', 'L3MON4D3/LuaSnip', 'saadparwaiz1/cmp_luasnip' },
+    requires = {
+        'hrsh7th/cmp-nvim-lsp',
+        'hrsh7th/cmp-buffer',
+    },
   }
 
   -- qol
@@ -43,14 +46,20 @@ require('packer').startup(function(use)
   use 'djoshea/vim-autoread' -- auto-reads changes to files TODO change this to inbuild nvim inode reader stuff
   use 'gcmt/taboo.vim' -- :TabooRename to rename tabs
   use 'scrooloose/nerdtree' -- TODO replace this one day
-  use 'romainl/vim-qf' -- quickfix options
+  use 'romainl/vim-qf' -- guickfix options :Keep :Reject :SaveList :Restore
   use 'nvim-lualine/lualine.nvim' -- Fancier statusline
   use {
     "zbirenbaum/copilot.lua",
     cmd = "Copilot",
     event = "InsertEnter",
     config = function()
-      require("copilot").setup({})
+      require("copilot").setup({
+          filetypes = {
+            java = true, -- allow specific filetype
+            yaml = true, -- allow specific filetype
+            ["*"] = false, -- disable for all other filetypes and ignore default `filetypes`
+          },
+      })
     end,
   }
   use {
@@ -88,6 +97,7 @@ require('packer').startup(function(use)
   use 'ggandor/lightspeed.nvim' -- type where you look
   use { 'nvim-telescope/telescope.nvim', branch = '0.1.x', requires = { 'nvim-lua/plenary.nvim' } }
   use { 'nvim-telescope/telescope-fzf-native.nvim', run = 'make', cond = vim.fn.executable 'make' == 1 }
+  use {'nvim-telescope/telescope-ui-select.nvim' } -- vim.ui.select = telescope; overrides some vim default
 
 -- }}}
 --- packer setup {{{
@@ -364,10 +374,33 @@ require('telescope').setup {
           path_display = custom_path_display
       },
   },
+  extensions = {
+    ["ui-select"] = {
+      require("telescope.themes").get_dropdown {
+        -- even more opts
+      }
+
+      -- pseudo code / specification for writing custom displays, like the one
+      -- for "codeactions"
+      -- specific_opts = {
+      --   [kind] = {
+      --     make_indexed = function(items) -> indexed_items, width,
+      --     make_displayer = function(widths) -> displayer
+      --     make_display = function(displayer) -> function(e)
+      --     make_ordinal = function(e) -> string
+      --   },
+      --   -- for example to disable the custom builtin "codeactions" display
+      --      do the following
+      --   codeactions = false,
+      -- }
+    }
+  }
+
 }
 
 -- Enable telescope fzf native, if installed
 pcall(require('telescope').load_extension, 'fzf')
+pcall(require("telescope").load_extension, "ui-select")
 
 -- See `:help telescope.builtin`
 vim.keymap.set('n', '<leader>rh', require('telescope.builtin').oldfiles, { desc = '[R]ecent [H]istory old files' })
@@ -519,8 +552,8 @@ mason_lspconfig.setup_handlers {
 -- }}}
 -- [[ Copilot ]] {{{
 -- require("copilot").setup({
---   suggestion = { enabled = false },
---   panel = { enabled = false },
+-- suggestion = { enabled = false },
+-- panel = { enabled = false },
 -- })
 -- }}}
 -- [[ nvim-cmp ]] {{{
@@ -539,17 +572,45 @@ cmp.setup {
     end,
   },
   mapping = cmp.mapping.preset.insert {
+    ["<C-x><C-b>"] = cmp.mapping.complete({
+        config = {
+          sources = {
+            { name = 'buffer' }
+          }
+        }
+    }),
+    ["<C-x><C-g>"] = cmp.mapping.complete({
+        config = {
+          sources = {
+            { name = 'copilot' }
+          }
+        }
+    }),
+    ["<C-x><C-l>"] = cmp.mapping.complete({
+        config = {
+          sources = {
+            { name = 'nvim_lsp' }
+          }
+        }
+    }),
     ["<CR>"] = cmp.mapping.confirm({
       -- this is the important line
       behavior = cmp.ConfirmBehavior.Replace,
       select = false,
     }),
     ['<C-e>'] = cmp.mapping.abort(),
+    ['<C-k>'] = function(fallback)
+      if cmp.visible() then
+        cmp.mapping.confirm({ select = true })(fallback)
+      else
+        cmp.mapping.complete()(fallback)
+      end
+    end
   },
   sources = {
-    { name = "copilot", group_index = 1 },
     { name = 'nvim_lsp', group_index = 1 },
-    { name = 'luasnip', group_index = 2 },
+    { name = "copilot", group_index = 1 },
+    { name = "buffer", keyword_length = 4, group_index = 1, max_item_count = 5 },
   },
 }
 -- }}}
@@ -557,10 +618,10 @@ cmp.setup {
 
 require("telescope").load_extension('harpoon')
 vim.keymap.set('n', '<leader>rm', require('harpoon.ui').toggle_quick_menu, { desc = 'Harpoon files' })
-vim.api.nvim_create_user_command('HarpoonAddFile', function() 
+vim.api.nvim_create_user_command('HarpoonAddFile', function()
     return require('harpoon.mark').add_file()
 end, {})
-vim.api.nvim_create_user_command('HarpoonList', function() 
+vim.api.nvim_create_user_command('HarpoonList', function()
     return require('harpoon.ui').toggle_quick_menu()
 end
     , {})
