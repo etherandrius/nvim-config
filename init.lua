@@ -35,6 +35,9 @@ require('packer').startup(function(use)
     requires = {
         'hrsh7th/cmp-nvim-lsp',
         'hrsh7th/cmp-buffer',
+        'saadparwaiz1/cmp_luasnip',
+	    'L3MON4D3/LuaSnip',
+        'rafamadriz/friendly-snippets' -- snipes for luasnip defined in vscode syntax
     },
   }
 
@@ -407,7 +410,12 @@ vim.keymap.set('n', '<leader>rh', require('telescope.builtin').oldfiles, { desc 
 vim.keymap.set('n', '<leader>b',require('telescope.builtin').current_buffer_fuzzy_find, { desc = '[B] Fuzzily search in current buffer]' })
 vim.keymap.set('n', 'z=',require('telescope.builtin').spell_suggest, { desc = 'Spell suggestions' })
 
-vim.keymap.set('n', '<leader>t', require('telescope.builtin').git_files, { desc = 'Search Git Files' })
+vim.keymap.set('n', '<leader>t', function ()
+    return require('telescope.builtin').git_files({
+        show_untracked = true,
+    })
+end
+, { desc = 'Search Git Files' })
 vim.keymap.set('n', '<leader>T', function ()
     return require('telescope.builtin').find_files({
         no_ignore = true,
@@ -565,6 +573,10 @@ local has_words_before = function()
   return col ~= 0 and vim.api.nvim_buf_get_text(0, line-1, 0, line-1, col, {})[1]:match("^%s*$") == nil
 end
 
+require("luasnip.loaders.from_vscode").load {
+    exclude = { "javascript" },
+}
+
 cmp.setup {
   snippet = {
     expand = function(args)
@@ -572,6 +584,13 @@ cmp.setup {
     end,
   },
   mapping = cmp.mapping.preset.insert {
+    ["<C-x><C-a>"] = cmp.mapping.complete({
+        config = {
+          sources = {
+            { name = 'luasnip' }
+          }
+        }
+    }),
     ["<C-x><C-b>"] = cmp.mapping.complete({
         config = {
           sources = {
@@ -648,7 +667,6 @@ vim.cmd('source ~/.config/nvim/lua-migration/plugins.vim')
 
 -- [[ Settings ]] {{{
 -- [[ Options ]] {{{
-
 vim.cmd('source ~/.config/nvim/lua-migration/set.vim')
 -- }}}
 -- [[ Keymaps ]] {{{
