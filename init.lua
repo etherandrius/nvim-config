@@ -85,6 +85,7 @@ require('packer').startup(function(use)
       pcall(require('nvim-treesitter.install').update { with_sync = true })
     end,
   }
+  use 'kmonad/kmonad-vim' -- kmonad syntax highlight
 
   -- text objects
   use 'michaeljsmith/vim-indent-object'
