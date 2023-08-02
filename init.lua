@@ -213,6 +213,9 @@ local servers = {
       completion = {
         importOrder = {},
       },
+      autobuild = {
+          enabled = false,
+      },
     },
     jdt = {
       ls = {
