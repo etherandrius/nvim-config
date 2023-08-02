@@ -209,7 +209,17 @@ local servers = {
   gopls = {},
   rust_analyzer = {},
   jdtls = {
-      java = { completion = { importOrder = {} } },
+    java = {
+      completion = {
+        importOrder = {},
+      },
+    },
+    jdt = {
+      ls = {
+        -- DEBUG: add arguments -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:1044 and run jdb -attach 127.0.0.1
+        vmargs = "-noverify -Xmx8G -XX:+UseG1GC -XX:+UseStringDeduplication",
+      },
+    },
   },
 
   -- sumneko_lua = {
