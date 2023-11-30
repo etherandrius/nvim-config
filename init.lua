@@ -218,8 +218,13 @@ local servers = {
         },
     },
   },
+  gradle_ls = {},
+  -- groovyls = {}, -- Not good enough yet; Need to manually add relevant jars
   jdtls = {
     java = {
+      saveActions = {
+          organizeImports = false,
+      },
       completion = {
         importOrder = {},
       },
@@ -231,6 +236,9 @@ local servers = {
       ls = {
         -- DEBUG: add arguments -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:1044 and run jdb -attach 127.0.0.1
         vmargs = "-noverify -Xmx8G -XX:+UseG1GC -XX:+UseStringDeduplication",
+        androidSupport = {
+            enabled = "off",
+        },
       },
     },
   },
