@@ -218,6 +218,8 @@ local servers = {
         },
     },
   },
+  -- tsserver = {}, -- Not able to install
+  graphql = {},
   gradle_ls = {},
   -- groovyls = {}, -- Not good enough yet; Need to manually add relevant jars
   jdtls = {
@@ -536,7 +538,7 @@ vim.keymap.set('n', '<leader>sd', require('telescope.builtin').diagnostics, { de
 -- See `:help nvim-treesitter`
 require('nvim-treesitter.configs').setup {
   -- Add languages to be installed here that you want installed for treesitter
-  ensure_installed = { 'java', 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'typescript', 'help', 'vim' },
+  ensure_installed = { 'java', 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'typescript', 'help', 'vim', 'graphql' },
   highlight = {
     enable = true,
     additional_vim_regex_highlighting = false,
@@ -564,7 +566,7 @@ require('nvim-treesitter.configs').setup {
 }
 --- }}}
 -- [[ Mason ]] {{{
--- [ nvim-cmp {{{
+-- [ nvim-cmp ] {{{
 -- nvim-cmp supports additional completion capabilities, so broadcast that to servers
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 capabilities = require('cmp_nvim_lsp').default_capabilities(capabilities)
