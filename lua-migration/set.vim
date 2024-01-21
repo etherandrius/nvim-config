@@ -145,6 +145,9 @@ set titlestring+=%{GetTitleString()}\ -\ [%t]\ %M\ -\ VIM
 "hi User1 cterm=bold ctermfg=230 ctermbg=241 guifg=#fdf6e3 guibg=#657b83 gui=bold
 hi User1 ctermfg=230 ctermbg=241 guifg=#fdf6e3 guibg=#657b83
 
+"DiagnosticHint is invisible by default
+hi! link DiagnosticHint DiagnosticInfo
+
 " better colors for matched parenthesis 
 " hi MatchParen gui=bold guibg=#eee8d5 guifg=#dc322f
 
