@@ -19,6 +19,11 @@ require('packer').startup(function(use)
   -- Package manager
   use 'wbthomason/packer.nvim'
 
+
+  -- Custom LSP configuration for Java jdtls
+  -- Needed to support jars
+  use 'mfussenegger/nvim-jdtls'
+
   -- LSP Configuration & Plugins
   use {
     'neovim/nvim-lspconfig',
@@ -163,7 +168,7 @@ vim.keymap.set('n', '<leader>qw', function ()
     })
 end, { desc = "LSP Warnings / Info / Hints"})
 
-local on_attach = function(_, bufnr)
+on_attach = function(_, bufnr)
   local nmap = function(keys, func, desc)
     if desc then
       desc = 'LSP: ' .. desc
@@ -200,7 +205,10 @@ local on_attach = function(_, bufnr)
   end, { desc = 'Format current buffer with LSP' })
 end
 -- }}}
--- [[ LSP - Servers ]] {{{
+-- [[ nvim-jdtls - Custom setup for java ]] {{{
+-- See ftplugin/java.lua
+-- }}}
+-- [[ Mason LSP - Servers ]] {{{
 -- Enable the following language servers
 --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
 --
@@ -222,6 +230,7 @@ local servers = {
   graphql = {},
   gradle_ls = {},
   -- groovyls = {}, -- Not good enough yet; Need to manually add relevant jars
+
   jdtls = {
     java = {
       saveActions = {
@@ -280,6 +289,9 @@ local javaPath = function ()
     local path = vim.fn.expand("%:h")
     if path:len() == 0 then
         return ""
+    end
+    if path:match("jdt://") then
+        path = "jdt://classpath"
     end
     if path:match("/Users/agrabauskas/Projects/java/foundry") then
         path = path:gsub("/Users/agrabauskas/Projects/java/foundry", "")
@@ -589,17 +601,18 @@ mason_lspconfig.setup_handlers {
       settings = servers[server_name],
     }
   end,
-  ["jdtls"] = function ()
-      require("lspconfig").jdtls.setup {
-          capabilities = capabilities,
-          on_attach = on_attach,
-          settings = servers["jdtls"],
-          handlers = {
-            ["textDocument/typeDefinition"] = require('andrius_lsp').custom_location_handler,
-            ["textDocument/implementation"] = require('andrius_lsp').custom_location_handler,
-          }
-      }
-  end,
+  ["jdtls"] = function() end, -- Do nothing we use nvim-jdtls instead
+  -- function ()
+  --     require("lspconfig").jdtls.setup {
+  --         capabilities = capabilities,
+  --         on_attach = on_attach,
+  --         settings = servers["jdtls"],
+  --         handlers = {
+  --           ["textDocument/typeDefinition"] = require('andrius_lsp').custom_location_handler,
+  --           ["textDocument/implementation"] = require('andrius_lsp').custom_location_handler,
+  --         }
+  --     }
+  -- end,
 }
 -- }}}
 -- [[ Copilot ]] {{{
