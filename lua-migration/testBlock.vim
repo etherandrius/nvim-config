@@ -70,6 +70,14 @@ vnoremap <Right> E
 
 nnoremap <Up> gT
 nnoremap <Down> gt
+nnoremap gl gt
+nnoremap gh gT
+
+" (aagg) Sat Sep  7 00:01:56 BST 2024
+nnoremap zl zL
+nnoremap zh zH
+nnoremap zL zl
+nnoremap zH zh
 
 " (aagg) Fri 14 May 2021 00:42:12 BST
 nnoremap <silent> <space>p "0p

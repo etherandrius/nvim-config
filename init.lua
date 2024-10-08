@@ -2,7 +2,6 @@
 
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
-vim.cmd('source ~/.config/nvim/lua-migration/color.vim')
 
 -- [[ Packer ]] {{{
 -- Install packer {{{
@@ -19,6 +18,20 @@ require('packer').startup(function(use)
   -- Package manager
   use 'wbthomason/packer.nvim'
 
+  -- colorscheme
+  use {
+    'maxmx03/solarized.nvim',
+    config = function()
+      vim.o.background = 'light'
+      local solarized = require('solarized')
+      vim.o.termguicolors = true
+      vim.o.background = 'light'
+      require('solarized').setup({
+          variant = 'spring', -- "spring" | "summer" | "autumn" | "winter" (default)
+      })
+      vim.cmd.colorscheme 'solarized'
+    end
+  }
 
   -- Custom LSP configuration for Java jdtls
   -- Needed to support jars
@@ -142,6 +155,17 @@ vim.api.nvim_create_autocmd('BufWritePost', {
 })
 -- }}}
 -- [[Plugin Configuration]] {{{
+-- [[ colorscheme ]] {{{
+
+-- require('solarized').setup({
+--     variant = 'spring', -- "spring" | "summer" | "autumn" | "winter" (default)
+-- })
+-- vim.api.nvim_set_hl(0, 'lsp.typemod.record.typeArgument.java', { fg = '#6C71C4' })
+-- vim.api.nvim_set_hl(0, '@lsp.typemod.record.typeArgument.java', { fg = '#6C71C4' })
+vim.cmd.colorscheme 'solarized'
+
+
+-- }}}
 -- [[ LSP - keymaps ]] {{{
 -- Diagnostic keymaps
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev)
@@ -226,9 +250,10 @@ local servers = {
         },
     },
   },
-  -- tsserver = {}, -- Not able to install
+  tsserver = {}, -- Not able to install
   graphql = {},
   gradle_ls = {},
+  kotlin_language_server = {},
   -- groovyls = {}, -- Not good enough yet; Need to manually add relevant jars
 
   jdtls = {
@@ -305,6 +330,9 @@ local javaPath = function ()
     if path:match("/src/test/") then
         path = path:gsub("/src/test/", "/T/")
     end
+    if path:match("/src/integrationTest/") then
+        path = path:gsub("/src/integrationTest/", "/IT/")
+    end
     if path:match("/src/main/") then
         path = path:gsub("/src/main/", "/S/")
     end
@@ -314,7 +342,7 @@ end
 require('lualine').setup {
     options = {
         icons_enabled = false,
-        theme = require('solarized-lualine'),
+        theme = 'solarized',
         component_separators = '|',
         section_separators = '',
     },
@@ -377,6 +405,10 @@ local custom_path_display = function(_opts, path)
     if path:find('/src/test/') then
         subtype = "test"
         path = path:gsub("/src/test/", "/T/")
+    end
+    if path:find('/src/integrationTest/') then
+        subtype = "itest"
+        path = path:gsub("/src/integrationTest/", "/IT/")
     end
     if path:find('/src/main/') then
         subtype = "src "
@@ -456,6 +488,8 @@ vim.keymap.set('n', '<leader>rh', require('telescope.builtin').oldfiles, { desc 
 vim.keymap.set('n', '<leader>b',require('telescope.builtin').current_buffer_fuzzy_find, { desc = '[B] Fuzzily search in current buffer]' })
 vim.keymap.set('n', 'z=',require('telescope.builtin').spell_suggest, { desc = 'Spell suggestions' })
 
+vim.keymap.set('n', '<leader>sq', require('telescope.builtin').quickfix, { desc = '[S]earch [Q]uickfix'})
+
 vim.keymap.set('n', '<leader>t', function ()
     return require('telescope.builtin').git_files({
         show_untracked = true,
@@ -507,8 +541,8 @@ vim.keymap.set('v', '<leader>rg', function ()
             "!*Test.java",
         }
     })
-end
-, { desc = '[S]earch source using [G]rep' })
+end, { desc = '[S]earch source using [G]rep' })
+
 vim.keymap.set('v', '<leader>Rg', function ()
     vim.cmd("normal v")
     local visual_selection = string.sub(vim.fn.getline("'<"), vim.fn.col("'<"), vim.fn.col("'>"))
@@ -532,6 +566,7 @@ vim.keymap.set('n', '<leader>rg', function ()
         }
     })
 end
+
 , { desc = '[S]earch source using [G]rep' })
 vim.keymap.set('n', '<leader>Rg', function ()
     return require('telescope.builtin').live_grep({
@@ -543,6 +578,24 @@ vim.keymap.set('n', '<leader>Rg', function ()
 end
 , { desc = '[S]earch all files using [G]rep' })
 
+vim.keymap.set('n', '<leader>rdg', function ()
+    -- local visual_selection = string.sub(vim.fn.getline("'<"), vim.fn.col("'<"), vim.fn.col("'>"))
+    return require('telescope.builtin').live_grep({
+        cwd = "/Users/agrabauskas/Projects/java/Foundry/forge/packages/pipelines",
+        search_dirs = {
+            "authoring-vscode-extension",
+            "authoring-vscode-extension-types",
+            "authoring-vscode-extension-webviews"
+        }, -- TODO(aagg): Better way to select directory
+        glob = {
+            "!changelog",
+            "!vendor",
+            "!*_test.go",
+            "!*Test.java",
+        }
+    })
+end, { desc = '[S]earch source using [G]rep' })
+
 vim.keymap.set('n', '<leader>sd', require('telescope.builtin').diagnostics, { desc = '[S]earch [D]iagnostics' })
 
 -- }}}
@@ -550,7 +603,7 @@ vim.keymap.set('n', '<leader>sd', require('telescope.builtin').diagnostics, { de
 -- See `:help nvim-treesitter`
 require('nvim-treesitter.configs').setup {
   -- Add languages to be installed here that you want installed for treesitter
-  ensure_installed = { 'java', 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'typescript', 'help', 'vim', 'graphql' },
+  ensure_installed = { 'java', 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'typescript', 'help', 'vim', 'graphql', 'terraform' },
   highlight = {
     enable = true,
     additional_vim_regex_highlighting = false,
