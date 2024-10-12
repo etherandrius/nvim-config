@@ -18,21 +18,6 @@ require('packer').startup(function(use)
   -- Package manager
   use 'wbthomason/packer.nvim'
 
-  -- colorscheme
-  use {
-    'maxmx03/solarized.nvim',
-    config = function()
-      vim.o.background = 'light'
-      local solarized = require('solarized')
-      vim.o.termguicolors = true
-      vim.o.background = 'light'
-      require('solarized').setup({
-          variant = 'spring', -- "spring" | "summer" | "autumn" | "winter" (default)
-      })
-      vim.cmd.colorscheme 'solarized'
-    end
-  }
-
   -- Custom LSP configuration for Java jdtls
   -- Needed to support jars
   use 'mfussenegger/nvim-jdtls'
@@ -92,8 +77,10 @@ require('packer').startup(function(use)
   }
 
 
+
   -- visual
-  use 'osyo-manga/vim-brightest' -- highlights current word in red
+  use 'maxmx03/solarized.nvim'
+  use 'osyo-manga/vim-brightest'
   use 'vim-scripts/MultipleSearch' -- Highlight multiple words at the same time
   use 'kshenoy/vim-signature' -- shows marks
   use { -- Highlight, edit, and navigate code
@@ -155,17 +142,6 @@ vim.api.nvim_create_autocmd('BufWritePost', {
 })
 -- }}}
 -- [[Plugin Configuration]] {{{
--- [[ colorscheme ]] {{{
-
--- require('solarized').setup({
---     variant = 'spring', -- "spring" | "summer" | "autumn" | "winter" (default)
--- })
--- vim.api.nvim_set_hl(0, 'lsp.typemod.record.typeArgument.java', { fg = '#6C71C4' })
--- vim.api.nvim_set_hl(0, '@lsp.typemod.record.typeArgument.java', { fg = '#6C71C4' })
-vim.cmd.colorscheme 'solarized'
-
-
--- }}}
 -- [[ LSP - keymaps ]] {{{
 -- Diagnostic keymaps
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev)
@@ -250,7 +226,8 @@ local servers = {
         },
     },
   },
-  tsserver = {}, -- Not able to install
+  ts_ls = {
+  }, -- Not able to install
   graphql = {},
   gradle_ls = {},
   kotlin_language_server = {},
@@ -795,5 +772,80 @@ vim.cmd('source ~/.config/nvim/lua-migration/keymaps.vim')
 -- [[ Random ]] {{{
 vim.cmd('source ~/.config/nvim/lua-migration/testBlock.vim')
 vim.cmd('source ~/.config/nvim/spell/abbrev.vim')
+-- }}}
+-- [[ colorscheme ]] {{{
+
+vim.o.background = 'light'
+vim.o.termguicolors = true
+vim.o.background = 'light'
+require('solarized').setup({
+  transparent = {
+    enabled = false,
+    pmenu = true,
+    normal = true,
+    normalfloat = true,
+    neotree = true,
+    nvimtree = true,
+    whichkey = true,
+    telescope = true,
+    lazy = true,
+  },
+  on_highlights = nil,
+  on_colors = nil,
+  palette = 'selenized', -- solarized (default) | selenized
+  variant = 'autumn', -- "spring" | "summer" | "autumn" | "winter" (default)
+  error_lens = {
+    text = false,
+    symbol = false,
+  },
+  styles = {
+    enabled = true,
+    types = {},
+    functions = {},
+    parameters = {},
+    comments = {},
+    strings = {},
+    keywords = {},
+    variables = {},
+    constants = {},
+  },
+  plugins = {
+    treesitter = true,
+    lspconfig = true,
+    navic = true,
+    cmp = true,
+    indentblankline = true,
+    neotree = true,
+    nvimtree = true,
+    whichkey = true,
+    dashboard = true,
+    gitsigns = true,
+    telescope = true,
+    noice = true,
+    hop = true,
+    ministatusline = true,
+    minitabline = true,
+    ministarter = true,
+    minicursorword = true,
+    notify = true,
+    rainbowdelimiters = true,
+    bufferline = true,
+    lazy = true,
+    rendermarkdown = true,
+    ale = true,
+    coc = true,
+    leap = true,
+    alpha = true,
+    yanky = true,
+    gitgutter = true,
+    mason = true,
+    flash = true,
+  },
+})
+
+vim.cmd.colorscheme 'solarized'
+
+
+
 -- }}}
 -- vim: set foldmethod=marker: set foldlevel=0: set shiftwidth=2: set tabstop=2

@@ -8,12 +8,12 @@
 " done
 
 let g:MultipleSearchTextColorSequence = "black,black,black,black,black,black,black"
+let g:MultipleSearchColorSequence = "#ffffaf,#d7ff87,#ffffff,#ffd7ff,#afffaf,#ffd7af,#d7ffff"
 let g:MultipleSearchMaxColors = 7
-if exists('g:neovide')
-    let g:MultipleSearchColorSequence = "#ffffaf,#d7ff87,#ffffff,#ffd7ff,#afffaf,#ffd7af,#d7ffff"
-else
-    let g:MultipleSearchColorSequence = "229,192,231,225,157,223,195"
-endif
+" let g:MultipleSearchColorSequence = "229,192,231,225,157,223,195"
+" if exists('g:neovide')
+" else
+" endif
 command! -nargs=0 Noh :noh | :SearchReset
 " }}}
 " {{{ NERDtree
@@ -30,7 +30,10 @@ let NERDTreeShowHidden=1
 " }}}
 " {{{ brightest
 
-hi BrightestCustom cterm=bold,underline ctermfg=DarkGrey guifg=Blue guibg=Yellow
+augroup custom_highlight
+  autocmd!
+  au ColorScheme * highlight BrightestCustom guifg=#d33682 guibg=#f8e2d9
+augroup END
 let g:brightest#highlight = {"group" : "BrightestCustom"}
 
 " }}}
