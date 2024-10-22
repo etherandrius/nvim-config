@@ -108,6 +108,9 @@ require('packer').startup(function(use)
   use { 'nvim-telescope/telescope-fzf-native.nvim', run = 'make', cond = vim.fn.executable 'make' == 1 }
   use {'nvim-telescope/telescope-ui-select.nvim' } -- vim.ui.select = telescope; overrides some vim default
 
+
+  use 'skywind3000/asyncrun.vim' -- :AsyncRun! echo 1; sleep 0.2; echo 2 , has a pretty good manual
+
 -- }}}
 --- packer setup {{{
   -- Add custom plugins to packer from ~/.config/nvim/lua/custom/plugins.lua
@@ -580,7 +583,7 @@ vim.keymap.set('n', '<leader>sd', require('telescope.builtin').diagnostics, { de
 -- See `:help nvim-treesitter`
 require('nvim-treesitter.configs').setup {
   -- Add languages to be installed here that you want installed for treesitter
-  ensure_installed = { 'java', 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'typescript', 'help', 'vim', 'graphql', 'terraform' },
+  ensure_installed = { 'java', 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'typescript', 'vimdoc', 'vim', 'graphql', 'terraform' },
   highlight = {
     enable = true,
     additional_vim_regex_highlighting = false,
