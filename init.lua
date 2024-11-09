@@ -76,8 +76,6 @@ require('packer').startup(function(use)
     end
   }
 
-
-
   -- visual
   use 'maxmx03/solarized.nvim'
   use 'osyo-manga/vim-brightest'
@@ -650,8 +648,8 @@ mason_lspconfig.setup_handlers {
 -- }}}
 -- [[ Copilot ]] {{{
 -- require("copilot").setup({
--- suggestion = { enabled = false },
--- panel = { enabled = false },
+-- -- suggestion = { enabled = false },
+-- -- panel = { enabled = false },
 -- })
 -- }}}
 -- [[ nvim-cmp ]] {{{
@@ -748,7 +746,14 @@ require("harpoon").setup({
 -- Simple Setups {{{
 require('Comment').setup()
 require('neodev').setup()
-require('fidget').setup()
+require('fidget').setup({
+-- :help fidget-options
+  progress = {
+    display = {
+      render_limit = 4,          -- How many LSP messages to show at once
+    },
+  },
+})
 -- }}}
 
 vim.cmd('source ~/.config/nvim/lua-migration/plugins.vim')
@@ -778,7 +783,6 @@ vim.cmd('source ~/.config/nvim/spell/abbrev.vim')
 -- }}}
 -- [[ colorscheme ]] {{{
 
-vim.o.background = 'light'
 vim.o.termguicolors = true
 vim.o.background = 'light'
 require('solarized').setup({
@@ -796,7 +800,7 @@ require('solarized').setup({
   on_highlights = nil,
   on_colors = nil,
   palette = 'selenized', -- solarized (default) | selenized
-  variant = 'autumn', -- "spring" | "summer" | "autumn" | "winter" (default)
+  variant = 'winter', -- "spring" | "summer" | "autumn" | "winter" (default)
   error_lens = {
     text = false,
     symbol = false,
@@ -847,8 +851,6 @@ require('solarized').setup({
 })
 
 vim.cmd.colorscheme 'solarized'
-
-
 
 -- }}}
 -- vim: set foldmethod=marker: set foldlevel=0: set shiftwidth=2: set tabstop=2

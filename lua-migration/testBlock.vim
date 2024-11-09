@@ -29,13 +29,6 @@ if $TERM_PROGRAM =~ "iTerm"
     let &t_EI = "\<Esc>]50;CursorShape=0\x7" " Block in normal mode
 endif
 
-" " easier source, flush
-" if has('nvim')
-" command! -nargs=0 Source :source ~/.config/nvim/init.lua
-" else
-" command -nargs=0 Source :source ~/.vimrc
-" endif
-
 " command! -nargs=0 Flush :NERDTreeRefreshRoot | :CommandTFlush
 command! -nargs=0 Flush :NERDTreeRefreshRoot
 
@@ -58,10 +51,6 @@ endfunc
 
 " Below shows how to copy all highlight groups into a buffer 1
 " ':redir @1 | :hi | redir END'
-
-command! -nargs=0 SlsLog :execute "normal! yyP%%i<CR><CR><ESC>V!jq<CR>%o<ESC>jV!slslog<CR>"
-
-hi TabLineSel ctermfg=DarkGreen ctermbg=White
 
 nnoremap <Left> B
 nnoremap <Right> E

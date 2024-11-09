@@ -1,9 +1,5 @@
 nmap Q <Nop>
 
-" (aagg) jumping to functions
-nmap gf ]]<ESC>V/\%V[a-zA-Z](<CR><ESC>:noh<CR>B
-nmap gF k[[<ESC>V/\%V[a-zA-Z](<CR><ESC>:noh<CR>B
-
 " (aagg) Wed Feb Wed May 31 22:37:23 BST 2023
 " These are needed here for quickfix file navigation
 nmap <C-n> :cn<CR>
@@ -19,10 +15,6 @@ xnoremap > >gv
 inoremap <C-c> <Esc><Esc>
 nnoremap <C-c> <Esc><Esc>
 vnoremap <C-c> <Esc><Esc>
-
-"insert a line below with out entering INSERT mode.  nnoremap <C-o> o<Esc> 
-" <leader>d deletes current buffer and keeps the split
-nnoremap <silent> <leader>d :lclose<bar>b#<bar>bd #<CR>
 
 " <leader>n next tab
 nnoremap <silent> <leader>n :tabn<CR>  
@@ -65,7 +57,12 @@ vnoremap ; :
 nmap <F2> :set invlist list?<CR>
 
 " Copy to clipboard
-noremap <leader>y "*y
+" (aagg) Sat Nov  9 03:43:54 PM GMT 2024
+if has('macunix')
+    noremap <leader>y "*y
+else
+    noremap <leader>y "+y
+endif
 
 " search for highlighted text with *
 vnoremap * y/\V<C-R>=escape(@",'/\')<CR><CR>
