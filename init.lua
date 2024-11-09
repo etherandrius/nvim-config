@@ -3,145 +3,253 @@
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
--- [[ Packer ]] {{{
--- Install packer {{{
-local install_path = vim.fn.stdpath 'data' .. '/site/pack/packer/start/packer.nvim'
-local is_bootstrap = false
-if vim.fn.empty(vim.fn.glob(install_path)) > 0 then
-  is_bootstrap = true
-  vim.fn.system { 'git', 'clone', '--depth', '1', 'https://github.com/wbthomason/packer.nvim', install_path }
-  vim.cmd [[packadd packer.nvim]]
+-- [[ Lazy.nvim ]] {{{
+-- Install lazy.vim {{{
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+if not (vim.uv or vim.loop).fs_stat(lazypath) then
+  local lazyrepo = "https://github.com/folke/lazy.nvim.git"
+  local out = vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
+  if vim.v.shell_error ~= 0 then
+    vim.api.nvim_echo({
+      { "Failed to clone lazy.nvim:\n", "ErrorMsg" },
+      { out, "WarningMsg" },
+      { "\nPress any key to exit..." },
+    }, true, {})
+    vim.fn.getchar()
+    os.exit(1)
+  end
 end
+vim.opt.rtp:prepend(lazypath)
 -- }}}
 -- [[ Plugins ]] {{{
-require('packer').startup(function(use)
-  -- Package manager
-  use 'wbthomason/packer.nvim'
-
-  -- Custom LSP configuration for Java jdtls
-  -- Needed to support jars
-  use 'mfussenegger/nvim-jdtls'
-
-  -- LSP Configuration & Plugins
-  use {
-    'neovim/nvim-lspconfig',
-    requires = {
-      'williamboman/mason.nvim', -- Automatically install LSPs to stdpath for neovim
-      'williamboman/mason-lspconfig.nvim',
-      'j-hui/fidget.nvim', -- Useful status updates for LSP
-      'folke/neodev.nvim', -- Additional lua configuration, makes nvim stuff amazing
+require("lazy").setup({
+  spec = {
+    {
+      -- Custom LSP configuration for Java jdtls
+      -- Needed to support jars
+      'mfussenegger/nvim-jdtls'
     },
-  }
-
-  use { -- Autocompletion
-    'hrsh7th/nvim-cmp',
-    requires = {
-        'hrsh7th/cmp-nvim-lsp',
-        'hrsh7th/cmp-buffer',
-        'saadparwaiz1/cmp_luasnip',
-	    'L3MON4D3/LuaSnip',
-        'rafamadriz/friendly-snippets' -- snipes for luasnip defined in vscode syntax
+    { -- LSP Configuration & Plugins
+        'neovim/nvim-lspconfig',
+        dependencies = {
+          'williamboman/mason.nvim', -- Automatically install LSPs to stdpath for neovim
+          'williamboman/mason-lspconfig.nvim',
+          'j-hui/fidget.nvim', -- Useful status updates for LSP
+          'folke/lazydev.nvim',
+        },
     },
-  }
-
-  -- qol
-  use 'tpope/vim-rhubarb' -- for fugitive for enterprise github
-  use 'tpope/vim-fugitive' -- essential
-  use 'tpope/vim-speeddating' -- better (de/in)crementing of date strings: (play Thu, 11 Apr 2002 00:59:58 +0000)
-  use 'tpope/vim-abolish' -- CoeRce to camelCase/snake_case/MixedCase crc crs crm
-  use 'djoshea/vim-autoread' -- auto-reads changes to files TODO change this to inbuild nvim inode reader stuff
-  use 'gcmt/taboo.vim' -- :TabooRename to rename tabs
-  use 'scrooloose/nerdtree' -- TODO replace this one day
-  use 'romainl/vim-qf' -- guickfix options :Keep :Reject :SaveList :Restore
-  use 'nvim-lualine/lualine.nvim' -- Fancier statusline
-  use {
-    "zbirenbaum/copilot.lua",
-    cmd = "Copilot",
-    event = "InsertEnter",
-    config = function()
-      require("copilot").setup({
-          filetypes = {
-            java = true, -- allow specific filetype
-            yaml = true, -- allow specific filetype
-            ["*"] = false, -- disable for all other filetypes and ignore default `filetypes`
+    {
+       -- Additional lua configuration, better LSP for nvim lua
+      {
+        "folke/lazydev.nvim",
+        ft = "lua", -- only load on lua files
+        opts = {
+          library = {
+            -- See the configuration section for more details
+            -- Load luvit types when the `vim.uv` word is found
+            { path = "luvit-meta/library", words = { "vim%.uv" } },
           },
-      })
-    end,
-  }
-  use {
-    "zbirenbaum/copilot-cmp",
-    after = { "copilot.lua" },
-    config = function ()
-      require("copilot_cmp").setup()
-    end
-  }
+        },
+      },
+      { "Bilal2453/luvit-meta", lazy = true }, -- optional `vim.uv` typings
+      { -- optional cmp completion source for require statements and module annotations
+        "hrsh7th/nvim-cmp",
+        opts = function(_, opts)
+          opts.sources = opts.sources or {}
+          table.insert(opts.sources, {
+            name = "lazydev",
+            group_index = 0, -- set group index to 0 to skip loading LuaLS completions
+          })
+        end,
+      },
+    },
+    {
+        'j-hui/fidget.nvim',
+        config = function ()
+            require('fidget').setup({
+            -- :help fidget-options
+              progress = {
+                display = {
+                  render_limit = 4,          -- How many LSP messages to show at once
+                },
+              },
+            })
+        end
+    },
+    { -- Autocompletion
+        'hrsh7th/nvim-cmp',
+        dependencies = {
+            'hrsh7th/cmp-nvim-lsp',
+            'hrsh7th/cmp-buffer',
+            'saadparwaiz1/cmp_luasnip',
+            'L3MON4D3/LuaSnip',
+            'rafamadriz/friendly-snippets' -- snipes for luasnip defined in vscode syntax
+        },
+    },
+    -- qol
+    { 'tpope/vim-rhubarb' }, -- for fugitive for enterprise github
+    { 'tpope/vim-fugitive' }, -- essential
+    { 'tpope/vim-speeddating' }, -- better (de/in)crementing of date strings: (play Thu, 11 Apr 2002 00:59:58 +0000)
+    { 'tpope/vim-abolish' }, -- CoeRce to camelCase/snake_case/MixedCase crc crs crm
+    { 'djoshea/vim-autoread' }, -- auto-reads changes to files TODO change this to inbuild nvim inode reader stuff
+    { 'gcmt/taboo.vim' }, -- :TabooRename to rename tabs
+    { 'scrooloose/nerdtree' }, -- TODO replace this one day
+    { 'romainl/vim-qf' }, -- guickfix options :Keep :Reject :SaveList :Restore
+    { 'nvim-lualine/lualine.nvim' }, -- Fancier statusline
+    {
+        "zbirenbaum/copilot.lua",
+        -- cmd = "Copilot",
+        -- event = "InsertEnter",
+        config = function()
+          require("copilot").setup({
+              filetypes = {
+                java = true, -- allow specific filetype
+                yaml = true, -- allow specific filetype
+                ["*"] = false, -- disable for all other filetypes and ignore default `filetypes`
+              },
+          })
+        end,
+    },
+    {
+        "zbirenbaum/copilot-cmp",
+        dependencies = { "copilot.lua" },
+        config = function ()
+          require("copilot_cmp").setup()
+        end
+    },
+    -- visual
+    {
+        'maxmx03/solarized.nvim',
+        lazy = false,
+        priority = 1000,
+        opts = {
+            transparent = {
+                enabled = false,
+                pmenu = true,
+                normal = true,
+                normalfloat = true,
+                neotree = true,
+                nvimtree = true,
+                whichkey = true,
+                telescope = true,
+                lazy = true,
+            },
+            on_highlights = nil,
+            on_colors = nil,
+            palette = 'selenized', -- solarized (default) | selenized
+            variant = 'spring', -- "spring" | "summer" | "autumn" | "winter" (default)
+            error_lens = {
+                text = false,
+                symbol = false,
+            },
+        },
+        config = function(_, opts)
+            vim.o.termguicolors = true
+            vim.o.background = 'light'
+            require('solarized').setup(opts)
+            vim.cmd.colorscheme 'solarized'
+        end,
+    },
+    { 'osyo-manga/vim-brightest' },
+    { 'vim-scripts/MultipleSearch' }, -- Highlight multiple words at the same time
+    { 'kshenoy/vim-signature' }, -- shows marks
+    -- Highlight, edit, and navigate code
+    {
+        "nvim-treesitter/nvim-treesitter",
+        config = function ()
+            local configs = require("nvim-treesitter.configs")
+            configs.setup({
+                ensure_installed = { 'java', 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'typescript', 'vimdoc', 'vim', 'graphql', 'terraform' },
+                modules = {},
+                ignore_install = {},
+                auto_install = true,
+                sync_install = false,
+                highlight = {
+                    enable = true,
+                    additional_vim_regex_highlighting = false,
+                },
+                indent = { enable = true },
+                textobjects = {
+                    select = {
+                        enable = true,
+                        lookahead = true,
+                        keymaps = {
+                            ["af"] = "@function.outer",
+                            ["if"] = "@function.inner",
+                            ["ia"] = "@parameter.inner",
+                            ["aa"] = "@parameter.outer",
+                        },
+                        include_surrounding_whitespace = function (table)
+                            local blockList = {
+                                ["@parameter.inner"] = true,
+                                ["@parameter.outer"] = true,
+                                ["@function.inner"] = true,
+                            }
+                            return not blockList[table["query_string"]]
+                        end
+                    },
+                },
+            })
+        end
+    },
+    {
+        'nvim-treesitter/playground',
+        dependencies = {
+		'nvim-treesitter/nvim-treesitter'
+	},
+    },
+    { 'kmonad/kmonad-vim' }, -- kmonad syntax highlight
+    -- text objects
+    { 'michaeljsmith/vim-indent-object' },
+    { 'numToStr/Comment.nvim' }, -- "gc" to comment visual regions/lines
+    {
+        'nvim-treesitter/nvim-treesitter-textobjects',
+        dependencies = 'nvim-treesitter',
+    },
+    -- navigation
+    { 'jremmen/vim-ripgrep' },
+    {
+        -- Global marks but better, project Specific
+        'ThePrimeagen/harpoon',
+        dependencies = {
+                'nvim-telescope/telescope.nvim',
+                'nvim-lua/plenary.nvim',
+        },
+        config = function ()
+            require("telescope").load_extension('harpoon')
+            vim.keymap.set('n', '<leader>rm', require('harpoon.ui').toggle_quick_menu, { desc = 'Harpoon files' })
+            vim.api.nvim_create_user_command('HarpoonAddFile', function()
+                return require('harpoon.mark').add_file()
+            end, {})
+            vim.api.nvim_create_user_command('HarpoonList', function()
+                return require('harpoon.ui').toggle_quick_menu()
+            end
+                , {})
 
-  -- visual
-  use 'maxmx03/solarized.nvim'
-  use 'osyo-manga/vim-brightest'
-  use 'vim-scripts/MultipleSearch' -- Highlight multiple words at the same time
-  use 'kshenoy/vim-signature' -- shows marks
-  use { -- Highlight, edit, and navigate code
-    'nvim-treesitter/nvim-treesitter',
-    'nvim-treesitter/playground',
-    run = function()
-      pcall(require('nvim-treesitter.install').update { with_sync = true })
-    end,
-  }
-  use 'kmonad/kmonad-vim' -- kmonad syntax highlight
+            vim.cmd("hi! link HarpoonWindow Normal")
+            vim.cmd("hi! link HarpoonBorder Normal")
 
-  -- text objects
-  use 'michaeljsmith/vim-indent-object'
-  use 'numToStr/Comment.nvim' -- "gc" to comment visual regions/lines
-  use {
-    'nvim-treesitter/nvim-treesitter-textobjects',
-    after = 'nvim-treesitter',
-  }
+            require("harpoon").setup({
+                menu = {
+                    width = math.min(vim.api.nvim_win_get_width(0) - 10, 180),
+                }
+            })
+        end
+    },
+    { 'ggandor/lightspeed.nvim' }, -- type where you look
+    { 'nvim-telescope/telescope.nvim', branch = '0.1.x', dependencies = { 'nvim-lua/plenary.nvim' } },
+    { 'nvim-telescope/telescope-fzf-native.nvim', build = 'make' },
+    { 'nvim-telescope/telescope-ui-select.nvim' }, -- vim.ui.select = telescope; overrides some vim default
+    -- Test
+    { 'skywind3000/asyncrun.vim' }, -- :AsyncRun! echo 1; sleep 0.2; echo 2 , has a pretty good manual
+  },
 
-  -- navigation
-  use 'jremmen/vim-ripgrep'
-  use 'ThePrimeagen/harpoon' -- Global marks but better, project Specific
-  use 'ggandor/lightspeed.nvim' -- type where you look
-  use { 'nvim-telescope/telescope.nvim', branch = '0.1.x', requires = { 'nvim-lua/plenary.nvim' } }
-  use { 'nvim-telescope/telescope-fzf-native.nvim', run = 'make', cond = vim.fn.executable 'make' == 1 }
-  use {'nvim-telescope/telescope-ui-select.nvim' } -- vim.ui.select = telescope; overrides some vim default
-
-
-  use 'skywind3000/asyncrun.vim' -- :AsyncRun! echo 1; sleep 0.2; echo 2 , has a pretty good manual
-
--- }}}
---- packer setup {{{
-  -- Add custom plugins to packer from ~/.config/nvim/lua/custom/plugins.lua
-  local has_plugins, plugins = pcall(require, 'custom.plugins')
-  if has_plugins then
-    plugins(use)
-  end
-
-  if is_bootstrap then
-    require('packer').sync()
-  end
-end)
-
--- When we are bootstrapping a configuration, it doesn't
--- make sense to execute the rest of the init.lua.
---
--- You'll need to restart nvim, and then it will work.
-if is_bootstrap then
-  print '=================================='
-  print '    Plugins are being installed'
-  print '    Wait until Packer completes,'
-  print '       then restart nvim'
-  print '=================================='
-  return
-end
--- Automatically source and re-compile packer whenever you save this init.lua
-local packer_group = vim.api.nvim_create_augroup('Packer', { clear = true })
-vim.api.nvim_create_autocmd('BufWritePost', {
-  command = 'source <afile> | silent! LspStop | silent! LspStart | PackerCompile',
-  group = packer_group,
-  pattern = vim.fn.expand '$MYVIMRC',
+  install = {
+      colorscheme = { "solarized" }
+  },
+  -- automatically check for plugin updates
+  checker = { enabled = true },
 })
--- }}}
 -- [[Plugin Configuration]] {{{
 -- [[ LSP - keymaps ]] {{{
 -- Diagnostic keymaps
@@ -165,11 +273,10 @@ vim.keymap.set('n', '<leader>qe', function ()
 end, { desc = "LSP Errors"})
 vim.keymap.set('n', '<leader>qw', function ()
     return vim.diagnostic.setqflist({
-        severity = { vim.diagnostic.severity.WARN, vim.diagnostic.severity.HINT, vim.diagnostic.severity.INFO }
     })
 end, { desc = "LSP Warnings / Info / Hints"})
 
-on_attach = function(_, bufnr)
+ON_ATTACH = function(_, bufnr)
   local nmap = function(keys, func, desc)
     if desc then
       desc = 'LSP: ' .. desc
@@ -328,14 +435,6 @@ require('lualine').setup {
         lualine_a = {'mode'},
         lualine_b = {
             'branch',
-            {
-                'diff',
-                diff_color = {
-                  added = { fg = 2 },
-                  modified = { fg = 3 },
-                  removed = { fg = 1 },
-                }
-            },
             'diagnostics'},
         lualine_c = {javaPath, 'filename'},
         lualine_x = {isGeneratedFile, isDiffFile, 'filetype'},
@@ -350,17 +449,6 @@ require('lualine').setup {
         lualine_y = {},
         lualine_z = {}
     },
-    diff_color = {
-        added = {
-          fg = 0,
-        },
-        modified = {
-          fg = 0,
-        },
-        removed = {
-          fg = 0,
-        },
-    }
 }
 -- }}}
 -- [[ Telescope ]] {{{
@@ -369,9 +457,8 @@ require('lualine').setup {
 local utils = require('telescope.utils')
 local entry_display = require("telescope.pickers.entry_display")
 
-local custom_path_display = function(_opts, path)
+local custom_path_display = function(_, path)
     local name = utils.path_tail(path)
-    local path = path
     local subtype = ""
     if path:find('/java/com/palantir/') then
         path = path:gsub("java/com/palantir/", "")
@@ -493,16 +580,6 @@ local findFilesForWordUnderCursor = function ()
 end
 vim.keymap.set('n', '<leader>sf', findFilesForWordUnderCursor, { desc = '[S]earch current [F]ile' })
 
-local findFilesForWordUnderCursor = function ()
-    local word = vim.fn.expand "<cword>"
-    require('telescope.builtin').find_files({
-        grep_open_files = true,
-        search_file = word,
-        no_ignore = false,
-    })
-end
-vim.keymap.set('n', '<leader>sF', findFilesForWordUnderCursor, { desc = '[S]earch current [F]ile' })
-
 vim.keymap.set('n', '<leader>sw', require('telescope.builtin').grep_string, {
     desc = '[S]earch current [W]ord'
 })
@@ -577,37 +654,6 @@ end, { desc = '[S]earch source using [G]rep' })
 vim.keymap.set('n', '<leader>sd', require('telescope.builtin').diagnostics, { desc = '[S]earch [D]iagnostics' })
 
 -- }}}
--- [[ Treesitter ]] {{{
--- See `:help nvim-treesitter`
-require('nvim-treesitter.configs').setup {
-  -- Add languages to be installed here that you want installed for treesitter
-  ensure_installed = { 'java', 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'typescript', 'vimdoc', 'vim', 'graphql', 'terraform' },
-  highlight = {
-    enable = true,
-    additional_vim_regex_highlighting = false,
-  },
-  textobjects = {
-    select = {
-      enable = true,
-      lookahead = true,
-      keymaps = {
-        ["af"] = "@function.outer",
-        ["if"] = "@function.inner",
-        ["ia"] = "@parameter.inner",
-        ["aa"] = "@parameter.outer",
-      },
-      include_surrounding_whitespace = function (table)
-        local blockList = {
-            ["@parameter.inner"] = true,
-            ["@parameter.outer"] = true,
-            ["@function.inner"] = true,
-        }
-        return not blockList[table["query_string"]]
-    end
-    },
-  },
-}
---- }}}
 -- [[ Mason ]] {{{
 -- [ nvim-cmp ] {{{
 -- nvim-cmp supports additional completion capabilities, so broadcast that to servers
@@ -628,7 +674,7 @@ mason_lspconfig.setup_handlers {
   function(server_name)
     require('lspconfig')[server_name].setup {
       capabilities = capabilities,
-      on_attach = on_attach,
+      on_attach = ON_ATTACH,
       settings = servers[server_name],
     }
   end,
@@ -646,20 +692,15 @@ mason_lspconfig.setup_handlers {
   -- end,
 }
 -- }}}
--- [[ Copilot ]] {{{
--- require("copilot").setup({
--- -- suggestion = { enabled = false },
--- -- panel = { enabled = false },
--- })
--- }}}
+-- -- [[ Copilot ]] {{{
+-- -- require("copilot").setup({
+-- -- -- suggestion = { enabled = false },
+-- -- -- panel = { enabled = false },
+-- -- })
+-- -- }}}
 -- [[ nvim-cmp ]] {{{
 local cmp = require 'cmp'
 local luasnip = require 'luasnip'
-local has_words_before = function()
-  if vim.api.nvim_buf_get_option(0, "buftype") == "prompt" then return false end
-  local line, col = unpack(vim.api.nvim_win_get_cursor(0))
-  return col ~= 0 and vim.api.nvim_buf_get_text(0, line-1, 0, line-1, col, {})[1]:match("^%s*$") == nil
-end
 
 require("luasnip.loaders.from_vscode").load {
     exclude = { "javascript" },
@@ -672,34 +713,6 @@ cmp.setup {
     end,
   },
   mapping = cmp.mapping.preset.insert {
-    ["<C-x><C-a>"] = cmp.mapping.complete({
-        config = {
-          sources = {
-            { name = 'luasnip' }
-          }
-        }
-    }),
-    ["<C-x><C-b>"] = cmp.mapping.complete({
-        config = {
-          sources = {
-            { name = 'buffer' }
-          }
-        }
-    }),
-    ["<C-x><C-g>"] = cmp.mapping.complete({
-        config = {
-          sources = {
-            { name = 'copilot' }
-          }
-        }
-    }),
-    ["<C-x><C-l>"] = cmp.mapping.complete({
-        config = {
-          sources = {
-            { name = 'nvim_lsp' }
-          }
-        }
-    }),
     ["<CR>"] = cmp.mapping.confirm({
       -- this is the important line
       behavior = cmp.ConfirmBehavior.Replace,
@@ -720,40 +733,6 @@ cmp.setup {
     { name = "buffer", keyword_length = 4, group_index = 1, max_item_count = 5 },
   },
 }
--- }}}
--- [[ Harpoon ]] {{{
-
-require("telescope").load_extension('harpoon')
-vim.keymap.set('n', '<leader>rm', require('harpoon.ui').toggle_quick_menu, { desc = 'Harpoon files' })
-vim.api.nvim_create_user_command('HarpoonAddFile', function()
-    return require('harpoon.mark').add_file()
-end, {})
-vim.api.nvim_create_user_command('HarpoonList', function()
-    return require('harpoon.ui').toggle_quick_menu()
-end
-    , {})
-
-vim.cmd("hi! link HarpoonWindow Normal")
-vim.cmd("hi! link HarpoonBorder Normal")
-
-require("harpoon").setup({
-    menu = {
-        width = math.min(vim.api.nvim_win_get_width(0) - 10, 180),
-    }
-})
-
--- }}}
--- Simple Setups {{{
-require('Comment').setup()
-require('neodev').setup()
-require('fidget').setup({
--- :help fidget-options
-  progress = {
-    display = {
-      render_limit = 4,          -- How many LSP messages to show at once
-    },
-  },
-})
 -- }}}
 
 vim.cmd('source ~/.config/nvim/lua-migration/plugins.vim')
@@ -780,77 +759,5 @@ vim.cmd('source ~/.config/nvim/lua-migration/keymaps.vim')
 -- [[ Random ]] {{{
 vim.cmd('source ~/.config/nvim/lua-migration/testBlock.vim')
 vim.cmd('source ~/.config/nvim/spell/abbrev.vim')
--- }}}
--- [[ colorscheme ]] {{{
-
-vim.o.termguicolors = true
-vim.o.background = 'light'
-require('solarized').setup({
-  transparent = {
-    enabled = false,
-    pmenu = true,
-    normal = true,
-    normalfloat = true,
-    neotree = true,
-    nvimtree = true,
-    whichkey = true,
-    telescope = true,
-    lazy = true,
-  },
-  on_highlights = nil,
-  on_colors = nil,
-  palette = 'selenized', -- solarized (default) | selenized
-  variant = 'winter', -- "spring" | "summer" | "autumn" | "winter" (default)
-  error_lens = {
-    text = false,
-    symbol = false,
-  },
-  styles = {
-    enabled = true,
-    types = {},
-    functions = {},
-    parameters = {},
-    comments = {},
-    strings = {},
-    keywords = {},
-    variables = {},
-    constants = {},
-  },
-  plugins = {
-    treesitter = true,
-    lspconfig = true,
-    navic = true,
-    cmp = true,
-    indentblankline = true,
-    neotree = true,
-    nvimtree = true,
-    whichkey = true,
-    dashboard = true,
-    gitsigns = true,
-    telescope = true,
-    noice = true,
-    hop = true,
-    ministatusline = true,
-    minitabline = true,
-    ministarter = true,
-    minicursorword = true,
-    notify = true,
-    rainbowdelimiters = true,
-    bufferline = true,
-    lazy = true,
-    rendermarkdown = true,
-    ale = true,
-    coc = true,
-    leap = true,
-    alpha = true,
-    yanky = true,
-    gitgutter = true,
-    mason = true,
-    flash = true,
-  },
-})
-
-vim.cmd.colorscheme 'solarized'
-
 -- }}}
 -- vim: set foldmethod=marker: set foldlevel=0: set shiftwidth=2: set tabstop=2
