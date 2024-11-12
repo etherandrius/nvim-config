@@ -28,13 +28,9 @@ let NERDTreeShowHidden=1
 " {{{ netrw
     let g:netrw_altfile = 1
 " }}}
-" {{{ brightest
+" {{{ cursorword
 
-augroup custom_highlight
-  autocmd!
-  au ColorScheme * highlight BrightestCustom guifg=#d33682 guibg=#f8e2d9
-augroup END
-let g:brightest#highlight = {"group" : "BrightestCustom"}
+highlight CursorWord guifg=#d33682 guibg=#f8e2d9
 
 " }}}
 " {{{ vim-fugitive rhubarb

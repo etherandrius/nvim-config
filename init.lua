@@ -151,7 +151,7 @@ require("lazy").setup({
                 vim.cmd.colorscheme 'solarized'
             end,
         },
-        { 'osyo-manga/vim-brightest' },
+        { 'xiyaowong/nvim-cursorword' }, -- :CursorWordEnable, some config in plugins.vim
         { 'etherandrius/MultipleSearch' }, -- Highlight multiple words at the same time
         { 'kshenoy/vim-signature' },      -- shows marks
         -- Highlight, edit, and navigate code
