@@ -24,6 +24,7 @@ vim.opt.rtp:prepend(lazypath)
 -- [[ Plugins ]] {{{
 require("lazy").setup({
     spec = {
+        { import = "plugins" },
         {
             -- Custom LSP configuration for Java jdtls
             -- Needed to support jars
@@ -34,7 +35,7 @@ require("lazy").setup({
             dependencies = {
                 'williamboman/mason.nvim', -- Automatically install LSPs to stdpath for neovim
                 'williamboman/mason-lspconfig.nvim',
-                'j-hui/fidget.nvim', -- Useful status updates for LSP
+                'j-hui/fidget.nvim',       -- Useful status updates for LSP
                 'folke/lazydev.nvim',
             },
         },
@@ -52,7 +53,7 @@ require("lazy").setup({
                 },
             },
             { "Bilal2453/luvit-meta", lazy = true }, -- optional `vim.uv` typings
-            {                                  -- optional cmp completion source for require statements and module annotations
+            {                                        -- optional cmp completion source for require statements and module annotations
                 "hrsh7th/nvim-cmp",
                 opts = function(_, opts)
                     opts.sources = opts.sources or {}
@@ -87,14 +88,14 @@ require("lazy").setup({
             },
         },
         -- qol
-        { 'tpope/vim-rhubarb' },     -- for fugitive for enterprise github
-        { 'tpope/vim-fugitive' },    -- essential
-        { 'tpope/vim-speeddating' }, -- better (de/in)crementing of date strings: (play Thu, 11 Apr 2002 00:59:58 +0000)
-        { 'tpope/vim-abolish' },     -- CoeRce to camelCase/snake_case/MixedCase crc crs crm
-        { 'djoshea/vim-autoread' },  -- auto-reads changes to files TODO change this to inbuild nvim inode reader stuff
-        { 'gcmt/taboo.vim' },        -- :TabooRename to rename tabs
-        { 'scrooloose/nerdtree' },   -- TODO replace this one day
-        { 'romainl/vim-qf' },        -- guickfix options :Keep :Reject :SaveList :Restore
+        { 'tpope/vim-rhubarb' },         -- for fugitive for enterprise github
+        { 'tpope/vim-fugitive' },        -- essential
+        { 'tpope/vim-speeddating' },     -- better (de/in)crementing of date strings: (play Thu, 11 Apr 2002 00:59:58 +0000)
+        { 'tpope/vim-abolish' },         -- CoeRce to camelCase/snake_case/MixedCase crc crs crm
+        { 'djoshea/vim-autoread' },      -- auto-reads changes to files TODO change this to inbuild nvim inode reader stuff
+        { 'gcmt/taboo.vim' },            -- :TabooRename to rename tabs
+        { 'scrooloose/nerdtree' },       -- TODO replace this one day
+        { 'romainl/vim-qf' },            -- guickfix options :Keep :Reject :SaveList :Restore
         { 'nvim-lualine/lualine.nvim' }, -- Fancier statusline
         {
             "zbirenbaum/copilot.lua",
@@ -103,8 +104,8 @@ require("lazy").setup({
             config = function()
                 require("copilot").setup({
                     filetypes = {
-                        java = true, -- allow specific filetype
-                        yaml = true, -- allow specific filetype
+                        java = true,   -- allow specific filetype
+                        yaml = true,   -- allow specific filetype
                         ["*"] = false, -- disable for all other filetypes and ignore default `filetypes`
                     },
                 })
@@ -137,7 +138,7 @@ require("lazy").setup({
                 on_highlights = nil,
                 on_colors = nil,
                 palette = 'selenized', -- solarized (default) | selenized
-                variant = 'spring', -- "spring" | "summer" | "autumn" | "winter" (default)
+                variant = 'spring',    -- "spring" | "summer" | "autumn" | "winter" (default)
                 error_lens = {
                     text = false,
                     symbol = false,
@@ -151,8 +152,8 @@ require("lazy").setup({
             end,
         },
         { 'osyo-manga/vim-brightest' },
-        { 'vim-scripts/MultipleSearch' }, -- Highlight multiple words at the same time
-        { 'kshenoy/vim-signature' },  -- shows marks
+        { 'etherandrius/MultipleSearch' }, -- Highlight multiple words at the same time
+        { 'kshenoy/vim-signature' },      -- shows marks
         -- Highlight, edit, and navigate code
         {
             "nvim-treesitter/nvim-treesitter",
@@ -241,7 +242,7 @@ require("lazy").setup({
         { 'nvim-telescope/telescope-fzf-native.nvim', build = 'make' },
         { 'nvim-telescope/telescope-ui-select.nvim' }, -- vim.ui.select = telescope; overrides some vim default
         -- Test
-        { 'skywind3000/asyncrun.vim' },            -- :AsyncRun! echo 1; sleep 0.2; echo 2 , has a pretty good manual
+        { 'skywind3000/asyncrun.vim' },                -- :AsyncRun! echo 1; sleep 0.2; echo 2 , has a pretty good manual
     },
 
     install = {
@@ -262,8 +263,8 @@ vim.keymap.set('n', 'ge', function()
     })
 end)
 vim.keymap.set('n', 'gE', function()
-    return vim.diagnostic.goto_prev({
-        severity = vim.diagnostic.severity.ERROR
+    return vim.diagnostic.goto_next({
+        -- severity = vim.diagnostic.severity.ERROR
     })
 end)
 vim.keymap.set('n', '<leader>qe', function()
@@ -693,12 +694,12 @@ mason_lspconfig.setup_handlers {
     -- end,
 }
 -- }}}
--- -- [[ Copilot ]] {{{
--- -- require("copilot").setup({
--- -- -- suggestion = { enabled = false },
--- -- -- panel = { enabled = false },
--- -- })
--- -- }}}
+-- [[ Copilot ]] {{{
+require("copilot").setup({
+    -- suggestion = { enabled = false },
+    -- panel = { enabled = false },
+})
+-- }}}
 -- [[ nvim-cmp ]] {{{
 local cmp = require 'cmp'
 local luasnip = require 'luasnip'
