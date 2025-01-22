@@ -22,6 +22,9 @@ nnoremap \tt :NERDTreeToggle<cr> " tree toggle
 nnoremap \tf :NERDTreeFind<cr>   " tree find
 nnoremap \tg :NERDTreeFocus<cr>  " tree go 
 
+" command! -nargs=0 Flush :NERDTreeRefreshRoot | :CommandTFlush
+command! -nargs=0 Flush :NERDTreeRefreshRoot
+
 let NERDTreeShowHidden=1
 
 " }}}

@@ -8,17 +8,8 @@ set breakindent
 " Considers - inside a word to be a part of the word. fake-word
 set iskeyword+=-
 
-if &diff 
-	set wrap
-endif
-
-" enables scrolling with mouse in iTerm2, a stands for all modes, use n if want normal mode scrolling only
+" enables scrolling with mouse
 set mouse=a
-
-" ruby li
-if !has('nvim')
-    set rubydll=/usr/local/opt/ruby/lib/libruby.2.6.dylib
-endif
 
 " setting default text width
 set textwidth=120
@@ -27,14 +18,6 @@ set textwidth=120
 " :help fo-table for letter meanings.
 set formatoptions=crqlt
 set formatoptions-=o 
-
-if has('gui')
-set guifont=InputMono:h13
-endif
-
-if has('gui')
-set belloff=all
-endif
 
 set foldenable
 set foldopen-=block " jumping with {  } will no longer open folds
@@ -127,29 +110,11 @@ set undodir=~/.vim/undo//
 " mode instance.
 set backspace=indent,eol,start
 
-function! StatusDiagnostic() abort
-  if exists("useCocLSP")
-    return call CocStatusDiagnostic()
-  endif
-  return ""
-endfunction
-
-function! GetTitleString() abort
-  return split(getcwd(), '/')[-1]
-endfunction
-
-" vim title settings - kinda funky care 
-set titlestring=""
-set titlestring+=%{GetTitleString()}\ -\ [%t]\ %M\ -\ VIM
-
-"hi User1 cterm=bold ctermfg=230 ctermbg=241 guifg=#fdf6e3 guibg=#657b83 gui=bold
-hi User1 ctermfg=230 ctermbg=241 guifg=#fdf6e3 guibg=#657b83
-
 "DiagnosticHint is invisible by default
 hi! link DiagnosticHint DiagnosticInfo
 
 " better colors for matched parenthesis 
-" hi MatchParen gui=bold guibg=#eee8d5 guifg=#dc322f
+hi MatchParen gui=bold guibg=none guifg=black
 
 " allow file custom settings. See bottom of this file for example
 set modeline

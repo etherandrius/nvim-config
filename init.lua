@@ -151,9 +151,9 @@ require("lazy").setup({
                 vim.cmd.colorscheme 'solarized'
             end,
         },
-        { 'xiyaowong/nvim-cursorword' }, -- :CursorWordEnable, some config in plugins.vim
+        { 'xiyaowong/nvim-cursorword' },   -- :CursorWordEnable, some config in plugins.vim
         { 'etherandrius/MultipleSearch' }, -- Highlight multiple words at the same time
-        { 'kshenoy/vim-signature' },      -- shows marks
+        { 'kshenoy/vim-signature' },       -- shows marks
         -- Highlight, edit, and navigate code
         {
             "nvim-treesitter/nvim-treesitter",
@@ -299,11 +299,12 @@ ON_ATTACH = function(_, bufnr)
 
     -- See `:help K` for why this keymap
     nmap('gD', vim.lsp.buf.hover, 'Hover Documentation')
+    nmap('gK', vim.lsp.buf.hover, 'Hover Documentation')
 
     -- Lesser used LSP functionality
     -- nmap('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
-    nmap('<leader>wa', vim.lsp.buf.add_workspace_folder, '[W]orkspace [A]dd Folder')
-    nmap('<leader>wr', vim.lsp.buf.remove_workspace_folder, '[W]orkspace [R]emove Folder')
+    -- nmap('<leader>wa', vim.lsp.buf.add_workspace_folder, '[W]orkspace [A]dd Folder')
+    -- nmap('<leader>wr', vim.lsp.buf.remove_workspace_folder, '[W]orkspace [R]emove Folder')
     nmap('<leader>wl', function()
         print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
     end, '[W]orkspace [L]ist Folders')
@@ -740,25 +741,19 @@ cmp.setup {
 vim.cmd('source ~/.config/nvim/lua-migration/plugins.vim')
 -- }}}
 -- }}}
-
--- [[ Settings ]] {{{
--- [[ Options ]] {{{
-vim.cmd('source ~/.config/nvim/lua-migration/set.vim')
 -- }}}
+-- [[ Settings ]] {{{
+vim.cmd('source ~/.config/nvim/lua-migration/set.vim')
 -- [[ Keymaps ]] {{{
 -- See `:help vim.keymap.set()`
-
 vim.keymap.set({ 'n', 'v' }, '<Space>', '<Nop>', { silent = true })
-
 -- Remap for dealing with word wrap
 vim.keymap.set('n', 'k', "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
 vim.keymap.set('n', 'j', "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 
 vim.cmd('source ~/.config/nvim/lua-migration/keymaps.vim')
 -- }}}
--- }}}
-
--- [[ Random ]] {{{
+vim.cmd('source ~/.config/nvim/lua-migration/augroup.vim')
 vim.cmd('source ~/.config/nvim/lua-migration/testBlock.vim')
 vim.cmd('source ~/.config/nvim/spell/abbrev.vim')
 -- }}}

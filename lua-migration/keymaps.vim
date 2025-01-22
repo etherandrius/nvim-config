@@ -1,4 +1,24 @@
+" Basic remaps {{{
+
 nmap Q <Nop>
+
+nnoremap <Up> gT
+nnoremap <Down> gt
+
+nnoremap <Left> B
+nnoremap <Right> E
+vnoremap <Left> B
+vnoremap <Right> E
+
+" (aagg) Sat Sep  7 00:01:56 BST 2024
+nnoremap zl zL
+nnoremap zh zH
+nnoremap zL zl
+nnoremap zH zh
+
+" (aagg) Fri 14 May 2021 00:42:12 BST
+nnoremap <silent> <space>p "0p
+vnoremap <silent> <space>p "0p
 
 " (aagg) Wed Feb Wed May 31 22:37:23 BST 2023
 " These are needed here for quickfix file navigation
@@ -15,14 +35,6 @@ xnoremap > >gv
 inoremap <C-c> <Esc><Esc>
 nnoremap <C-c> <Esc><Esc>
 vnoremap <C-c> <Esc><Esc>
-
-" <leader>n next tab
-nnoremap <silent> <leader>n :tabn<CR>  
-nnoremap <silent> <leader>N :tabp<CR>  
-
-" " <leader>n next buffer
-" nnoremap <silent> <leader>n :bn<CR>  
-" nnoremap <silent> <leader>N :bp<CR>  
 
 "making shift tab work as backwards tab.
 inoremap <S-Tab> <C-d>
@@ -80,3 +92,78 @@ nnoremap <leader>J <C-w>J
 nnoremap <leader>h <C-w>h
 nnoremap <leader>H <C-w>H
 
+" }}}
+" ZE - z eye level (like zz, zt, zb) {{{
+
+" quarter scroll
+function! ScrollQ()
+    let height=winheight(0)
+    execute 'normal! ' . height/4 . "\<C-E>"
+endfunction
+nnoremap <silent> ze zz:call ScrollQ()<CR>" z eye level
+vnoremap <silent> ze <C-c>zz:call ScrollQ()<CR>gv
+
+" }}}
+" Indent based navigation {{{
+
+" Jump to the next or previous line that has the same level or a lower
+" level of indentation than the current line.
+"
+" exclusive (bool): true: Motion is exclusive
+" false: Motion is inclusive
+" fwd (bool): true: Go to next line
+" false: Go to previous line
+" lowerlevel (bool): true: Go to line with lower indentation level
+" false: Go to line with the same indentation level
+function! NextIndent(exclusive, fwd, lowerlevel)
+  let line = line('.')
+  let column = col('.')
+  let ogLine = line('.')
+  let ogColumn = col('.')
+  let lastline = line('$')
+  let indent = indent(line)
+  let stepvalue = a:fwd ? 1 : -1
+
+  if (line > 0 && line <= lastline)
+    let line = line + stepvalue
+    if ( ! a:lowerlevel && indent(line) == indent || a:lowerlevel && indent(line) < indent)
+        if (strlen(getline(line)) > 0)
+          if (a:exclusive)
+            let line = line - stepvalue
+          endif
+          exe line
+          exe "normal " column . "|"
+          return
+        endif
+    endif
+  endif
+
+  " adds the current position to the jump list
+  normal! m`
+  call cursor(ogLine, ogColumn)
+
+  while (line > 0 && line <= lastline) " && (indent <= indent(line) || (indent(line) == 0 && strlen(getline(line)) == 0) ))
+    let line = line + stepvalue
+    if ( ! a:lowerlevel && indent(line) == indent || a:lowerlevel && indent(line) < indent)
+      if (strlen(getline(line)) > 0)
+        if (a:exclusive)
+          let line = line - stepvalue
+        endif
+        exe line
+        exe "normal " column . "|"
+        return
+      endif
+    endif
+  endwhile
+endfunction
+
+" Moving back and forth between lines of same or lower indentation.
+noremap <silent> <C-h> :call NextIndent(0, 0, 1)<CR>
+noremap <silent> <C-k> :call NextIndent(0, 0, 0)<CR>
+noremap <silent> <C-j> :call NextIndent(0, 1, 0)<CR>
+vnoremap <silent> <C-h> <Esc>:call NextIndent(0, 0, 1)<CR>m'gv''
+vnoremap <silent> <C-k> <Esc>:call NextIndent(0, 0, 0)<CR>m'gv''
+vnoremap <silent> <C-j> <Esc>:call NextIndent(0, 1, 0)<CR>m'gv''
+
+" }}}
+" vim: set foldmethod=marker: set foldlevel=0
