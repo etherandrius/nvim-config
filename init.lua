@@ -251,7 +251,8 @@ require("lazy").setup({
     -- automatically check for plugin updates
     checker = { enabled = true },
 })
--- [[Plugin Configuration]] {{{
+-- [[ Plugins ]] }}}
+-- Plugin config
 -- [[ LSP - keymaps ]] {{{
 -- Diagnostic keymaps
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev)
@@ -329,7 +330,11 @@ local servers = {
     rust_analyzer = {},
     lua_ls = {
         Lua = {
-            workspace = { checkThirdParty = false },
+            
+            workspace = { 
+                checkThirdParty = false,
+                library = { "~/.luarocks/share/lua/5.4/" }
+            },
             telemetry = { enable = false },
             diagnostics = {
                 globals = { 'vim' },
@@ -737,9 +742,8 @@ cmp.setup {
     },
 }
 -- }}}
-
+-- [[ lua-migration ]] {{{
 vim.cmd('source ~/.config/nvim/lua-migration/plugins.vim')
--- }}}
 -- }}}
 -- }}}
 -- [[ Settings ]] {{{
@@ -757,4 +761,4 @@ vim.cmd('source ~/.config/nvim/lua-migration/augroup.vim')
 vim.cmd('source ~/.config/nvim/lua-migration/testBlock.vim')
 vim.cmd('source ~/.config/nvim/spell/abbrev.vim')
 -- }}}
--- vim: set foldmethod=marker: set foldlevel=0: set shiftwidth=2: set tabstop=2
+-- vim: foldlevel=1:foldmethod=marker
