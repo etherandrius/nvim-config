@@ -746,7 +746,8 @@ cmp.setup {
 vim.cmd('source ~/.config/nvim/lua-migration/plugins.vim')
 -- }}}
 -- }}}
--- [[ Settings ]] {{{
+-- [[ Custom ]] {{{
+require("test")
 vim.cmd('source ~/.config/nvim/lua-migration/set.vim')
 -- [[ Keymaps ]] {{{
 -- See `:help vim.keymap.set()`
