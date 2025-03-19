@@ -26,6 +26,27 @@ require("lazy").setup({
     spec = {
         { import = "plugins" },
         {
+            'Exafunction/codeium.vim',
+            event = 'BufEnter',
+            config = function()
+                vim.keymap.set('i', '<C-i>', function() return vim.fn['codeium#Accept']() end,
+                    { expr = true, silent = true })
+                vim.keymap.set('i', '<C-u>', function() return vim.fn['codeium#CycleCompletions'](1) end,
+                    { expr = true, silent = true })
+                -- vim.keymap.set('i', '<C-y>', function() return vim.fn['codeium#CycleCompletions'](-1) end,
+                    -- { expr = true, silent = true })
+                -- vim.keymap.set('i', '<c-x>', function() return vim.fn['codeium#Clear']() end,
+                --     { expr = true, silent = true })
+                --     Clear current suggestion	codeium#Clear()	<C-]>
+                -- Next suggestion	codeium#CycleCompletions(1)	<M-]>
+                -- Previous suggestion	codeium#CycleCompletions(-1)	<M-[>
+                -- Insert suggestion	codeium#Accept()	<Tab>
+                -- Manually trigger suggestion	codeium#Complete()	<M-Bslash>
+                -- Accept word from suggestion	codeium#AcceptNextWord()	<C-k>
+                -- Accept line from suggestion	codeium#AcceptNextLine()	<C-l>
+            end
+        },
+        {
             -- Custom LSP configuration for Java jdtls
             -- Needed to support jars
             'mfussenegger/nvim-jdtls'
@@ -97,27 +118,6 @@ require("lazy").setup({
         { 'scrooloose/nerdtree' },       -- TODO replace this one day
         { 'romainl/vim-qf' },            -- guickfix options :Keep :Reject :SaveList :Restore
         { 'nvim-lualine/lualine.nvim' }, -- Fancier statusline
-        {
-            "zbirenbaum/copilot.lua",
-            -- cmd = "Copilot",
-            -- event = "InsertEnter",
-            config = function()
-                require("copilot").setup({
-                    filetypes = {
-                        java = true,   -- allow specific filetype
-                        yaml = true,   -- allow specific filetype
-                        ["*"] = false, -- disable for all other filetypes and ignore default `filetypes`
-                    },
-                })
-            end,
-        },
-        {
-            "zbirenbaum/copilot-cmp",
-            dependencies = { "copilot.lua" },
-            config = function()
-                require("copilot_cmp").setup()
-            end
-        },
         -- visual
         {
             'maxmx03/solarized.nvim',
@@ -249,7 +249,7 @@ require("lazy").setup({
         colorscheme = { "solarized" }
     },
     -- automatically check for plugin updates
-    checker = { enabled = true },
+    checker = { enabled = true, notify = false },
 })
 -- [[ Plugins ]] }}}
 -- Plugin config
@@ -345,6 +345,7 @@ local servers = {
     }, -- Not able to install
     graphql = {},
     gradle_ls = {},
+    pyright = {},
     kotlin_language_server = {},
     -- groovyls = {}, -- Not good enough yet; Need to manually add relevant jars
 
@@ -644,10 +645,14 @@ end
 vim.keymap.set('n', '<leader>rdg', function()
     -- local visual_selection = string.sub(vim.fn.getline("'<"), vim.fn.col("'<"), vim.fn.col("'>"))
     return require('telescope.builtin').live_grep({
-        cwd = "/Users/agrabauskas/Projects/java/Foundry/forge/packages/pipelines",
+        cwd = "/Volumes/git/vscode-team/forge/packages/pipelines",
         search_dirs = {
             "authoring-vscode-extension",
+            "authoring-vscode-extension-core",
+            "authoring-vscode-extension-core-types",
+            "authoring-vscode-extension-integration-test",
             "authoring-vscode-extension-types",
+            "authoring-vscode-extension-utils",
             "authoring-vscode-extension-webviews"
         }, -- TODO(aagg): Better way to select directory
         glob = {
@@ -676,6 +681,7 @@ require('mason').setup()
 local mason_lspconfig = require 'mason-lspconfig'
 mason_lspconfig.setup {
     ensure_installed = vim.tbl_keys(servers),
+    automatic_installation = false,
 }
 
 mason_lspconfig.setup_handlers {
@@ -700,11 +706,9 @@ mason_lspconfig.setup_handlers {
     -- end,
 }
 -- }}}
--- [[ Copilot ]] {{{
-require("copilot").setup({
-    -- suggestion = { enabled = false },
-    -- panel = { enabled = false },
-})
+-- [[ codeium ]] {{{
+vim.g.codeium_disable_bindings = 1
+vim.g.codeium_log_level = "TRACE"
 -- }}}
 -- [[ nvim-cmp ]] {{{
 local cmp = require 'cmp'
@@ -737,7 +741,6 @@ cmp.setup {
     },
     sources = {
         { name = 'nvim_lsp', group_index = 1 },
-        { name = "copilot",  group_index = 1 },
         { name = "buffer",   keyword_length = 4, group_index = 1, max_item_count = 5 },
     },
 }
