@@ -199,7 +199,19 @@ require("lazy").setup({
                 'nvim-treesitter/nvim-treesitter'
             },
         },
-        { 'kmonad/kmonad-vim' }, -- kmonad syntax highlight
+        { 'kmonad/kmonad-vim' },           -- kmonad syntax highlight
+        {
+            'norcalli/nvim-colorizer.lua', -- #e8ffd1
+            config = function()
+                require 'colorizer'.setup {
+                    'lua',
+                    'css',
+                    'javascript',
+                    'html',
+                    'rust',
+                }
+            end,
+        },
         -- text objects
         { 'michaeljsmith/vim-indent-object' },
         { 'numToStr/Comment.nvim' }, -- "gc" to comment visual regions/lines
