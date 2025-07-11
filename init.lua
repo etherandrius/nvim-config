@@ -29,9 +29,9 @@ require("lazy").setup({
             'Exafunction/codeium.vim',
             event = 'BufEnter',
             config = function()
-                vim.keymap.set('i', '<C-i>', function() return vim.fn['codeium#Accept']() end,
+                vim.keymap.set('i', '<C-l>', function() return vim.fn['codeium#Accept']() end,
                     { expr = true, silent = true })
-                vim.keymap.set('i', '<C-u>', function() return vim.fn['codeium#CycleCompletions'](1) end,
+                vim.keymap.set('i', '<C-h>', function() return vim.fn['codeium#CycleCompletions'](1) end,
                     { expr = true, silent = true })
                 -- vim.keymap.set('i', '<C-y>', function() return vim.fn['codeium#CycleCompletions'](-1) end,
                     -- { expr = true, silent = true })
@@ -342,8 +342,7 @@ local servers = {
     rust_analyzer = {},
     lua_ls = {
         Lua = {
-            
-            workspace = { 
+            workspace = {
                 checkThirdParty = false,
                 library = { "~/.luarocks/share/lua/5.4/" }
             },
@@ -354,36 +353,19 @@ local servers = {
         },
     },
     ts_ls = {
-    }, -- Not able to install
+    },
+    -- prettier = {},
     graphql = {},
     gradle_ls = {},
-    pyright = {},
+    basedpyright = {},
     kotlin_language_server = {},
     -- groovyls = {}, -- Not good enough yet; Need to manually add relevant jars
 
+--     {"sha256": "7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172",
+-- "allowed": true}
     jdtls = {
-        java = {
-            saveActions = {
-                organizeImports = false,
-            },
-            completion = {
-                importOrder = {},
-            },
-            autobuild = {
-                enabled = false,
-            },
-        },
-        jdt = {
-            ls = {
-                -- DEBUG: add arguments -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:1044 and run jdb -attach 127.0.0.1
-                vmargs = "-noverify -Xmx8G -XX:+UseG1GC -XX:+UseStringDeduplication",
-                androidSupport = {
-                    enabled = "off",
-                },
-            },
-        },
+        -- See ftplugin/java.lua
     },
-
     -- sumneko_lua = {
     --   Lua = {
     --     workspace = { checkThirdParty = false },
@@ -577,14 +559,14 @@ vim.keymap.set('n', 'z=', require('telescope.builtin').spell_suggest, { desc = '
 vim.keymap.set('n', '<leader>sq', require('telescope.builtin').quickfix, { desc = '[S]earch [Q]uickfix' })
 
 vim.keymap.set('n', '<leader>t', function()
-    return require('telescope.builtin').git_files({
-        show_untracked = true,
+    return require('telescope.builtin').find_files({
     })
 end
 , { desc = 'Search Git Files' })
 vim.keymap.set('n', '<leader>T', function()
     return require('telescope.builtin').find_files({
         no_ignore = true,
+        hidden = true,
     })
 end
 , { desc = 'Search ALL Files' })
@@ -594,7 +576,6 @@ vim.keymap.set('n', '<leader>sh', require('telescope.builtin').help_tags, { desc
 local findFilesForWordUnderCursor = function()
     local word = vim.fn.expand "<cword>"
     require('telescope.builtin').find_files({
-        grep_open_files = true,
         search_file = word,
         no_ignore = true,
     })
@@ -705,17 +686,6 @@ mason_lspconfig.setup_handlers {
         }
     end,
     ["jdtls"] = function() end, -- Do nothing we use nvim-jdtls instead
-    -- function ()
-    --     require("lspconfig").jdtls.setup {
-    --         capabilities = capabilities,
-    --         on_attach = on_attach,
-    --         settings = servers["jdtls"],
-    --         handlers = {
-    --           ["textDocument/typeDefinition"] = require('andrius_lsp').custom_location_handler,
-    --           ["textDocument/implementation"] = require('andrius_lsp').custom_location_handler,
-    --         }
-    --     }
-    -- end,
 }
 -- }}}
 -- [[ codeium ]] {{{
