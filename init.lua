@@ -411,28 +411,8 @@ local servers = {
     basedpyright = {},
     -- kotlin_language_server = {},
     -- groovyls = {}, -- Not good enough yet; Need to manually add relevant jars
-
     -- jdtls = {
-    --     java = {
-    --         saveActions = {
-    --             organizeImports = false,
-    --         },
-    --         completion = {
-    --             importOrder = {},
-    --         },
-    --         autobuild = {
-    --             enabled = false,
-    --         },
-    --     },
-    --     jdt = {
-    --         ls = {
-    --             -- DEBUG: add arguments -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:1044 and run jdb -attach 127.0.0.1
-    --             vmargs = "-noverify -Xmx8G -XX:+UseG1GC -XX:+UseStringDeduplication",
-    --             androidSupport = {
-    --                 enabled = "off",
-    --             },
-    --         },
-    --     },
+    --     -- See ftplugin/java.lua
     -- },
 
     -- sumneko_lua = {
@@ -635,6 +615,7 @@ end, { desc = 'Search Git Files' })
 vim.keymap.set('n', '<leader>T', function()
     return require('telescope.builtin').find_files({
         no_ignore = true,
+        hidden = true,
     })
 end, { desc = 'Search ALL Files' })
 vim.keymap.set('n', '<leader>m', require('telescope.builtin').git_stash, { desc = 'Search [M]odified Files' })
@@ -644,7 +625,6 @@ vim.keymap.set('n', '<leader>sh', require('telescope.builtin').help_tags, { desc
 local findFilesForWordUnderCursor = function()
     local word = vim.fn.expand "<cword>"
     require('telescope.builtin').find_files({
-        grep_open_files = true,
         search_file = word,
         no_ignore = true,
     })
