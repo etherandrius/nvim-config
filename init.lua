@@ -29,9 +29,9 @@ require("lazy").setup({
             'Exafunction/codeium.vim',
             event = 'BufEnter',
             config = function()
-                vim.keymap.set('i', '<C-i>', function() return vim.fn['codeium#Accept']() end,
+                vim.keymap.set('i', '<C-l>', function() return vim.fn['codeium#Accept']() end,
                     { expr = true, silent = true })
-                vim.keymap.set('i', '<C-u>', function() return vim.fn['codeium#CycleCompletions'](1) end,
+                vim.keymap.set('i', '<C-h>', function() return vim.fn['codeium#CycleCompletions'](1) end,
                     { expr = true, silent = true })
                 -- vim.keymap.set('i', '<C-y>', function() return vim.fn['codeium#CycleCompletions'](-1) end,
                     -- { expr = true, silent = true })
@@ -54,8 +54,8 @@ require("lazy").setup({
         { -- LSP Configuration & Plugins
             'neovim/nvim-lspconfig',
             dependencies = {
-                'williamboman/mason.nvim', -- Automatically install LSPs to stdpath for neovim
-                'williamboman/mason-lspconfig.nvim',
+                'mason-org/mason.nvim', -- Automatically install LSPs to stdpath for neovim
+                'mason-org/mason-lspconfig.nvim',
                 'j-hui/fidget.nvim',       -- Useful status updates for LSP
                 'folke/lazydev.nvim',
             },
@@ -276,8 +276,8 @@ vim.keymap.set('n', 'ge', function()
     })
 end)
 vim.keymap.set('n', 'gE', function()
-    return vim.diagnostic.goto_next({
-        -- severity = vim.diagnostic.severity.ERROR
+    return vim.diagnostic.goto_prev({
+        severity = vim.diagnostic.severity.ERROR
     })
 end)
 vim.keymap.set('n', '<leader>qe', function()
@@ -290,43 +290,42 @@ vim.keymap.set('n', '<leader>qw', function()
     })
 end, { desc = "LSP Warnings / Info / Hints" })
 
-ON_ATTACH = function(_, bufnr)
-    local nmap = function(keys, func, desc)
-        if desc then
-            desc = 'LSP: ' .. desc
-        end
-
-        vim.keymap.set('n', keys, func, { buffer = bufnr, desc = desc })
+local nmap = function(keys, func, desc)
+    if desc then
+        desc = 'LSP: ' .. desc
     end
 
-    nmap('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
-    nmap('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction')
-
-    -- lua print(require('vim.lsp').buf_request(0, 'textDocument/typeDefinition', require('vim.lsp.util').make_position_params(), nil))
-    nmap('gd', vim.lsp.buf.definition, '[G]oto [D]efinition')
-    nmap('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
-    nmap('gi', vim.lsp.buf.implementation, '[G]oto [I]mplementation')
-    nmap('gy', vim.lsp.buf.type_definition, '[G]oto T[Y]pe Definition')
-    nmap('<leader>ds', require('telescope.builtin').lsp_document_symbols, '[D]ocument [S]ymbols')
-    nmap('<leader>ws', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
-
-    -- See `:help K` for why this keymap
-    nmap('gD', vim.lsp.buf.hover, 'Hover Documentation')
-    nmap('gK', vim.lsp.buf.hover, 'Hover Documentation')
-
-    -- Lesser used LSP functionality
-    -- nmap('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
-    -- nmap('<leader>wa', vim.lsp.buf.add_workspace_folder, '[W]orkspace [A]dd Folder')
-    -- nmap('<leader>wr', vim.lsp.buf.remove_workspace_folder, '[W]orkspace [R]emove Folder')
-    nmap('<leader>wl', function()
-        print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
-    end, '[W]orkspace [L]ist Folders')
-
-    -- Create a command `:Format` local to the LSP buffer
-    vim.api.nvim_buf_create_user_command(bufnr, 'Format', function(_)
-        vim.lsp.buf.format()
-    end, { desc = 'Format current buffer with LSP' })
+    vim.keymap.set('n', keys, func, { desc = desc })
 end
+
+nmap('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
+nmap('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction')
+
+-- lua print(require('vim.lsp').buf_request(0, 'textDocument/typeDefinition', require('vim.lsp.util').make_position_params(), nil))
+nmap('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
+nmap('gd', vim.lsp.buf.definition, '[G]oto [D]efinition')
+nmap('gi', vim.lsp.buf.implementation, '[G]oto [I]mplementation')
+nmap('gy', vim.lsp.buf.type_definition, '[G]oto T[Y]pe Definition')
+nmap('<leader>ds', require('telescope.builtin').lsp_document_symbols, '[D]ocument [S]ymbols')
+nmap('<leader>ws', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
+
+-- See `:help K` for why this keymap
+nmap('gD', vim.lsp.buf.hover, 'Hover Documentation')
+nmap('gK', vim.lsp.buf.hover, 'Hover Documentation')
+
+-- Lesser used LSP functionality
+-- nmap('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
+-- nmap('<leader>wa', vim.lsp.buf.add_workspace_folder, '[W]orkspace [A]dd Folder')
+-- nmap('<leader>wr', vim.lsp.buf.remove_workspace_folder, '[W]orkspace [R]emove Folder')
+nmap('<leader>wl', function()
+    print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
+end, '[W]orkspace [L]ist Folders')
+
+-- Create a command `:Format` local to the LSP buffer
+vim.api.nvim_create_user_command('Format', function(_)
+    vim.lsp.buf.format()
+end, { desc = 'Format current buffer with LSP' })
+
 -- }}}
 -- [[ nvim-jdtls - Custom setup for java ]] {{{
 -- See ftplugin/java.lua
@@ -342,8 +341,7 @@ local servers = {
     rust_analyzer = {},
     lua_ls = {
         Lua = {
-            
-            workspace = { 
+            workspace = {
                 checkThirdParty = false,
                 library = { "~/.luarocks/share/lua/5.4/" }
             },
@@ -353,36 +351,36 @@ local servers = {
             },
         },
     },
-    ts_ls = {
-    }, -- Not able to install
-    graphql = {},
-    gradle_ls = {},
-    pyright = {},
-    kotlin_language_server = {},
+    ts_ls = {},
+    css_lsp = {},
+    -- graphql = {},
+    -- gradle_ls = {},
+    basedpyright = {},
+    -- kotlin_language_server = {},
     -- groovyls = {}, -- Not good enough yet; Need to manually add relevant jars
 
-    jdtls = {
-        java = {
-            saveActions = {
-                organizeImports = false,
-            },
-            completion = {
-                importOrder = {},
-            },
-            autobuild = {
-                enabled = false,
-            },
-        },
-        jdt = {
-            ls = {
-                -- DEBUG: add arguments -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:1044 and run jdb -attach 127.0.0.1
-                vmargs = "-noverify -Xmx8G -XX:+UseG1GC -XX:+UseStringDeduplication",
-                androidSupport = {
-                    enabled = "off",
-                },
-            },
-        },
-    },
+    -- jdtls = {
+    --     java = {
+    --         saveActions = {
+    --             organizeImports = false,
+    --         },
+    --         completion = {
+    --             importOrder = {},
+    --         },
+    --         autobuild = {
+    --             enabled = false,
+    --         },
+    --     },
+    --     jdt = {
+    --         ls = {
+    --             -- DEBUG: add arguments -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:1044 and run jdb -attach 127.0.0.1
+    --             vmargs = "-noverify -Xmx8G -XX:+UseG1GC -XX:+UseStringDeduplication",
+    --             androidSupport = {
+    --                 enabled = "off",
+    --             },
+    --         },
+    --     },
+    -- },
 
     -- sumneko_lua = {
     --   Lua = {
@@ -580,14 +578,13 @@ vim.keymap.set('n', '<leader>t', function()
     return require('telescope.builtin').git_files({
         show_untracked = true,
     })
-end
-, { desc = 'Search Git Files' })
+end, { desc = 'Search Git Files' })
 vim.keymap.set('n', '<leader>T', function()
     return require('telescope.builtin').find_files({
         no_ignore = true,
     })
-end
-, { desc = 'Search ALL Files' })
+end, { desc = 'Search ALL Files' })
+vim.keymap.set('n', '<leader>m', require('telescope.builtin').git_stash, { desc = 'Search [M]odified Files' })
 -- nnoremap <leader>T <cmd>lua require('telescope.builtin').find_files({find_command = {'rg', '--files', '--no-ignore', '--glob', '!*.class'}})<cr>
 vim.keymap.set('n', '<leader>sh', require('telescope.builtin').help_tags, { desc = '[S]earch [H]elp' })
 
@@ -692,31 +689,10 @@ require('mason').setup()
 -- Ensure the servers above are installed
 local mason_lspconfig = require 'mason-lspconfig'
 mason_lspconfig.setup {
+    automatic_enable = true,
     ensure_installed = vim.tbl_keys(servers),
-    automatic_installation = false,
 }
 
-mason_lspconfig.setup_handlers {
-    function(server_name)
-        require('lspconfig')[server_name].setup {
-            capabilities = capabilities,
-            on_attach = ON_ATTACH,
-            settings = servers[server_name],
-        }
-    end,
-    ["jdtls"] = function() end, -- Do nothing we use nvim-jdtls instead
-    -- function ()
-    --     require("lspconfig").jdtls.setup {
-    --         capabilities = capabilities,
-    --         on_attach = on_attach,
-    --         settings = servers["jdtls"],
-    --         handlers = {
-    --           ["textDocument/typeDefinition"] = require('andrius_lsp').custom_location_handler,
-    --           ["textDocument/implementation"] = require('andrius_lsp').custom_location_handler,
-    --         }
-    --     }
-    -- end,
-}
 -- }}}
 -- [[ codeium ]] {{{
 vim.g.codeium_disable_bindings = 1
