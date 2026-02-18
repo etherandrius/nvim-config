@@ -379,7 +379,6 @@ end, '[W]orkspace [L]ist Folders')
 vim.api.nvim_create_user_command('Format', function(_)
     vim.lsp.buf.format()
 end, { desc = 'Format current buffer with LSP' })
-
 -- }}}
 -- [[ nvim-jdtls - Custom setup for java ]] {{{
 -- See ftplugin/java.lua
@@ -618,7 +617,8 @@ vim.keymap.set('n', '<leader>T', function()
         hidden = true,
     })
 end, { desc = 'Search ALL Files' })
-vim.keymap.set('n', '<leader>m', require('telescope.builtin').git_stash, { desc = 'Search [M]odified Files' })
+vim.keymap.set('n', '<leader>m', require('telescope.builtin').git_status, { desc = 'Search [M]odified Files' })
+
 -- nnoremap <leader>T <cmd>lua require('telescope.builtin').find_files({find_command = {'rg', '--files', '--no-ignore', '--glob', '!*.class'}})<cr>
 vim.keymap.set('n', '<leader>sh', require('telescope.builtin').help_tags, { desc = '[S]earch [H]elp' })
 
@@ -731,6 +731,12 @@ mason_lspconfig.setup {
 vim.g.codeium_enabled = false
 vim.g.codeium_disable_bindings = 1
 vim.g.codeium_log_level = "TRACE"
+if vim.env.CODEIUM_PORTAL_URL and vim.env.CODEIUM_API_URL then
+  vim.g.codeium_server_config = {
+    portal_url = vim.env.CODEIUM_PORTAL_URL,
+    api_url = vim.env.CODEIUM_API_URL,
+  }
+end
 -- }}}
 -- [[ nvim-cmp ]] {{{
 local cmp = require 'cmp'
