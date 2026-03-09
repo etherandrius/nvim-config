@@ -789,6 +789,7 @@ vim.cmd('source ~/.config/nvim/lua-migration/plugins.vim')
 -- [[ Custom ]] {{{
 require("cargo-read-only")
 require("notes-template")
+require("notes-backlinks")
 vim.cmd('source ~/.config/nvim/lua-migration/set.vim')
 -- [[ Keymaps ]] {{{
 -- See `:help vim.keymap.set()`
