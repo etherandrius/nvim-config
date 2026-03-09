@@ -7,7 +7,7 @@ vim.g.maplocalleader = ' '
 -- Install lazy.vim {{{
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
-  local lazyrepo = "https://github.com/folke/lazy.nvim.git"
+    local lazyrepo = "https://github.com/folke/lazy.nvim.git"
     local out = vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
     if vim.v.shell_error ~= 0 then
         vim.api.nvim_echo({
@@ -391,6 +391,7 @@ end, { desc = 'Format current buffer with LSP' })
 --  the `settings` field of the server config. You must look up that documentation yourself.
 local servers = {
     gopls = {},
+    marksman = {},
     -- rust_analyzer = {}, -- Managed by rustaceanvim, do not enable here
     lua_ls = {
         Lua = {
@@ -725,6 +726,14 @@ mason_lspconfig.setup {
     automatic_enable = { exclude = { "rust_analyzer" } },
     ensure_installed = vim.tbl_keys(servers),
 }
+
+-- Apply server-specific settings and capabilities
+for server_name, server_settings in pairs(servers) do
+    vim.lsp.config(server_name, {
+        capabilities = capabilities,
+        settings = server_settings,
+    })
+end
 
 -- }}}
 -- [[ codeium ]] {{{
