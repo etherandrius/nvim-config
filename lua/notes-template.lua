@@ -1,4 +1,4 @@
-local value = os.getenv("NOTES_PATH")
+local value = os.getenv("NOTES_DIR")
 if value then
     value = value:gsub("/$", "")
     local notes_dir = vim.fn.expand(value)
