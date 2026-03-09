@@ -7,10 +7,29 @@ local jdtls_bin = vim.fn.stdpath("data") .. "/mason/bin/jdtls"
 
 local config = {
     cmd = { jdtls_bin },
-    root_dir = vim.fs.dirname(vim.fs.find({ 'gradlew', 'settings.gradle', 'build.gradle', '.git', 'mvnw' }, { upward = true })[1]),
+    root_dir = vim.fs.dirname(vim.fs.find({ 'gradlew', 'settings.gradle', 'build.gradle', '.git', 'mvnw' },
+        { upward = true })[1]),
     capabilities = capabilities,
     settings = {
         java = {
+            classpath = {
+                outputPath = "build",
+            },
+            project = {
+                sourcePaths = { "build/generated/sources" },
+                outputPath = "build",
+            },
+            configuration = {
+                updateBuildConfiguration = "disabled",
+            },
+            import = {
+                gradle = {
+                    enabled = true,
+                    wrapper = { enabled = true },
+                    annotationProcessing = { enabled = true },
+                },
+            },
+
             implementationCodeLens = "all",
             saveactions = {
                 organizeimports = false,
