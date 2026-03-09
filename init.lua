@@ -601,8 +601,8 @@ pcall(require("telescope").load_extension, "ui-select")
 
 -- See `:help telescope.builtin`
 vim.keymap.set('n', '<leader>rh', require('telescope.builtin').oldfiles, { desc = '[R]ecent [H]istory old files' })
-vim.keymap.set('n', '<leader>b', require('telescope.builtin').current_buffer_fuzzy_find,
-    { desc = '[B] Fuzzily search in current buffer]' })
+vim.keymap.set('n', '<leader>b', require('telescope.builtin').buffers,
+    { desc = 'Search [B]uffers]' })
 vim.keymap.set('n', 'z=', require('telescope.builtin').spell_suggest, { desc = 'Spell suggestions' })
 
 vim.keymap.set('n', '<leader>sq', require('telescope.builtin').quickfix, { desc = '[S]earch [Q]uickfix' })

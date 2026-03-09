@@ -14,12 +14,10 @@ if value then
             -- Only apply template if file is empty
             local line_count = vim.api.nvim_buf_line_count(0)
             if line_count == 1 and vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] == "" then
-                local date = os.date("%Y-%m-%d")
                 local filename = vim.fn.expand("%:t:r") -- filename without extension
                 local lines = {
                     "# " .. filename,
                     "",
-                    "Date: " .. date,
                     "Tags: ",
                     "",
                     "---",
