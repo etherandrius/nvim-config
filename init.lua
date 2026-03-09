@@ -306,16 +306,26 @@ require("lazy").setup({
 -- Plugin config
 -- [[ LSP - keymaps ]] {{{
 -- Diagnostic keymaps
-vim.keymap.set('n', '[d', vim.diagnostic.goto_prev)
-vim.keymap.set('n', ']d', vim.diagnostic.goto_next)
+vim.keymap.set('n', '[d', function()
+    vim.diagnostic.jump({
+        count = -1
+    })
+end)
+vim.keymap.set('n', ']d', function()
+    vim.diagnostic.jump({
+        count = 1
+    })
+end)
 vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float)
 vim.keymap.set('n', 'ge', function()
-    return vim.diagnostic.goto_next({
+    return vim.diagnostic.jump({
+        count = 1,
         severity = vim.diagnostic.severity.ERROR
     })
 end)
 vim.keymap.set('n', 'gE', function()
-    return vim.diagnostic.goto_prev({
+    return vim.diagnostic.jump({
+        count = -1,
         severity = vim.diagnostic.severity.ERROR
     })
 end)
@@ -741,10 +751,10 @@ vim.g.codeium_enabled = false
 vim.g.codeium_disable_bindings = 1
 vim.g.codeium_log_level = "TRACE"
 if vim.env.CODEIUM_PORTAL_URL and vim.env.CODEIUM_API_URL then
-  vim.g.codeium_server_config = {
-    portal_url = vim.env.CODEIUM_PORTAL_URL,
-    api_url = vim.env.CODEIUM_API_URL,
-  }
+    vim.g.codeium_server_config = {
+        portal_url = vim.env.CODEIUM_PORTAL_URL,
+        api_url = vim.env.CODEIUM_API_URL,
+    }
 end
 -- }}}
 -- [[ nvim-cmp ]] {{{
