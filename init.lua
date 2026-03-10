@@ -225,20 +225,19 @@ require("lazy").setup({
             -- Global marks but better, project Specific
             'ThePrimeagen/harpoon',
             branch = "harpoon2",
+            event = "VeryLazy",
             dependencies = {
                 'nvim-lua/plenary.nvim',
             },
             config = function()
                 local harpoon = require("harpoon")
+                local git_dir = vim.fn.system("git rev-parse --git-common-dir 2>/dev/null"):gsub("\n", "")
+                local harpoon_key = vim.v.shell_error == 0
+                    and vim.fn.fnamemodify(git_dir, ":p")
+                    or vim.loop.cwd()
                 harpoon:setup({
                     settings = {
-                        key = function()
-                            local git_dir = vim.fn.system("git rev-parse --git-common-dir 2>/dev/null"):gsub("\n", "")
-                            if vim.v.shell_error == 0 then
-                                return vim.fn.fnamemodify(git_dir, ":p")
-                            end
-                            return vim.loop.cwd()
-                        end,
+                        key = function() return harpoon_key or "/tmp" end,
                     },
                 })
 
