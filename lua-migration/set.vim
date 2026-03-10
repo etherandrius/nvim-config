@@ -45,10 +45,6 @@ set gdefault
 " expands every tab into spaces.
 set expandtab
 
-" tab length is equal to 4 spaces.
-set tabstop=4
-set shiftwidth=4
-
 set history=50
 
 " have the h and l cursor keys wrap between lines (like <Space> and <BkSpc> do

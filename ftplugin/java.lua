@@ -1,3 +1,6 @@
+vim.opt_local.shiftwidth = 4
+vim.opt_local.tabstop = 4
+
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 -- Maybe capabilities = require('cmp_nvim_lsp').update_capabilities(capabilities)
 capabilities = require('cmp_nvim_lsp').default_capabilities(capabilities)
