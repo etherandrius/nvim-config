@@ -800,6 +800,7 @@ vim.cmd('source ~/.config/nvim/lua-migration/plugins.vim')
 require("cargo-read-only")
 require("notes-template")
 require("notes-backlinks")
+require("notes-tags-hover")
 vim.cmd('source ~/.config/nvim/lua-migration/set.vim')
 -- [[ Keymaps ]] {{{
 -- See `:help vim.keymap.set()`
