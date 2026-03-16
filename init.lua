@@ -113,7 +113,6 @@ require("lazy").setup({
         { 'tpope/vim-fugitive' },        -- essential
         { 'tpope/vim-speeddating' },     -- better (de/in)crementing of date strings: (play Thu, 11 Apr 2002 00:59:58 +0000)
         { 'tpope/vim-abolish' },         -- CoeRce to camelCase/snake_case/MixedCase crc crs crm
-        { 'djoshea/vim-autoread' },      -- auto-reads changes to files TODO change this to inbuild nvim inode reader stuff
         { 'gcmt/taboo.vim' },            -- :TabooRename to rename tabs
         { 'scrooloose/nerdtree' },       -- TODO replace this one day
         { 'romainl/vim-qf' },            -- guickfix options :Keep :Reject :SaveList :Restore
@@ -824,6 +823,13 @@ vim.keymap.set('n', 'j', "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = tr
 vim.cmd('source ~/.config/nvim/lua-migration/keymaps.vim')
 -- }}}
 vim.cmd('source ~/.config/nvim/lua-migration/augroup.vim')
+-- [[ Built-in autoread ]] {{{
+vim.o.autoread = true
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold" }, {
+    command = "silent! checktime",
+    desc = "Auto-reload files changed outside of Neovim",
+})
+-- ]}}
 vim.cmd('source ~/.config/nvim/lua-migration/testBlock.vim')
 vim.cmd('source ~/.config/nvim/spell/abbrev.vim')
 -- }}}
