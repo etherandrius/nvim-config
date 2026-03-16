@@ -1,5 +1,4 @@
-local ns_id = vim.api.nvim_create_namespace("backlinks")
-local cache = {} -- bufnr -> { title_line, filenames }
+local REFS_PATTERN = "^Refs: "
 
 local function find_first_heading(bufnr)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
@@ -11,49 +10,39 @@ local function find_first_heading(bufnr)
   return nil
 end
 
-local function render_backlinks(bufnr)
-  vim.api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
-
-  local cached = cache[bufnr]
-  if not cached then return end
-
-  local title_line = cached.title_line
-  local filenames = cached.filenames
-  local prefix = "Refs: "
-  local max_width = vim.api.nvim_win_get_width(0) - #prefix
-  local virt_lines = {}
-  local current = {}
-  local current_len = 0
-
-  for i, fname in ipairs(filenames) do
-    local sep = i < #filenames and ", " or ""
-    local token = fname .. sep
-    if current_len + #token > max_width and #current > 0 then
-      local indent = #virt_lines == 0 and { prefix, "Keyword" } or { string.rep(" ", #prefix), "Normal" }
-      table.insert(virt_lines, { indent, { table.concat(current), "Comment" } })
-      current, current_len = {}, 0
+local function find_refs_line(bufnr, after_line)
+  local lines = vim.api.nvim_buf_get_lines(bufnr, after_line + 1, after_line + 3, false)
+  for i, line in ipairs(lines) do
+    if line:match(REFS_PATTERN) then
+      return after_line + i  -- 0-indexed
     end
-    table.insert(current, token)
-    current_len = current_len + #token
   end
+  return nil
+end
 
-  if #current > 0 then
-    local indent = #virt_lines == 0 and { prefix, "Keyword" } or { string.rep(" ", #prefix), "Normal" }
-    table.insert(virt_lines, { indent, { table.concat(current), "Comment" } })
+local function write_backlinks(bufnr, title_line, filenames)
+  local refs_text = "Refs: " .. table.concat(filenames, ", ")
+  local existing = find_refs_line(bufnr, title_line)
+
+  if existing then
+    local current = vim.api.nvim_buf_get_lines(bufnr, existing, existing + 1, false)[1]
+    if current == refs_text then return end
+    vim.api.nvim_buf_set_lines(bufnr, existing, existing + 1, false, { refs_text })
+  else
+    vim.api.nvim_buf_set_lines(bufnr, title_line + 1, title_line + 1, false, { refs_text })
   end
+end
 
-  vim.api.nvim_buf_set_extmark(bufnr, ns_id, title_line, 0, {
-    virt_lines = virt_lines,
-    virt_lines_above = false,
-  })
+local function remove_refs_line(bufnr, title_line)
+  local existing = find_refs_line(bufnr, title_line)
+  if existing then
+    vim.api.nvim_buf_set_lines(bufnr, existing, existing + 1, false, {})
+  end
 end
 
 local function fetch_backlinks(bufnr)
   local title_line = find_first_heading(bufnr)
-  if not title_line then
-    cache[bufnr] = nil
-    return
-  end
+  if not title_line then return end
 
   vim.lsp.buf_request(bufnr, 'textDocument/references', {
     textDocument = vim.lsp.util.make_text_document_params(bufnr),
@@ -61,7 +50,7 @@ local function fetch_backlinks(bufnr)
     context = { includeDeclaration = true }
   }, function(err, result)
     if err or not result or #result == 0 then
-      cache[bufnr] = nil
+      remove_refs_line(bufnr, title_line)
       return
     end
 
@@ -77,12 +66,11 @@ local function fetch_backlinks(bufnr)
     end
 
     if #filenames == 0 then
-      cache[bufnr] = nil
+      remove_refs_line(bufnr, title_line)
       return
     end
 
-    cache[bufnr] = { title_line = title_line, filenames = filenames }
-    render_backlinks(bufnr)
+    write_backlinks(bufnr, title_line, filenames)
   end)
 end
 
@@ -102,15 +90,6 @@ if notes_dir_value then
       local bufnr = vim.api.nvim_get_current_buf()
       if is_note(bufnr) then
         fetch_backlinks(bufnr)
-      end
-    end,
-  })
-
-  vim.api.nvim_create_autocmd("VimResized", {
-    callback = function()
-      local bufnr = vim.api.nvim_get_current_buf()
-      if is_note(bufnr) then
-        render_backlinks(bufnr)
       end
     end,
   })
