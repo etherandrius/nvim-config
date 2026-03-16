@@ -657,8 +657,10 @@ vim.keymap.set('n', '<leader>sw', require('telescope.builtin').grep_string, {
 vim.keymap.set('v', '<leader>rg', function()
     vim.cmd("normal v")
     local visual_selection = string.sub(vim.fn.getline("'<"), vim.fn.col("'<"), vim.fn.col("'>"))
+    -- Escape regex special characters
+    local escaped = visual_selection:gsub('[%^%$%(%)%?%*%+%[%]%{%}%%%|%.%-\\]', '\\%0')
     return require('telescope.builtin').live_grep({
-        default_text = visual_selection,
+        default_text = escaped,
         glob = {
             "!changelog",
             "!vendor",
@@ -671,8 +673,10 @@ end, { desc = '[S]earch source using [G]rep' })
 vim.keymap.set('v', '<leader>Rg', function()
     vim.cmd("normal v")
     local visual_selection = string.sub(vim.fn.getline("'<"), vim.fn.col("'<"), vim.fn.col("'>"))
+    -- Escape regex special characters
+    local escaped = visual_selection:gsub('[%^%$%(%)%?%*%+%[%]%{%}%%%|%.%-\\]', '\\%0')
     return require('telescope.builtin').live_grep({
-        default_text = visual_selection,
+        default_text = escaped,
         glob = {
             "!changelog",
             "!vendor",
