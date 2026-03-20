@@ -660,7 +660,9 @@ vim.keymap.set('v', '<leader>rg', function()
     local escaped = visual_selection:gsub('[%^%$%(%)%?%*%+%[%]%{%}%%%|%.%-\\]', '\\%0')
     return require('telescope.builtin').live_grep({
         default_text = escaped,
+        additional_args = { "--hidden" },
         glob = {
+            "!.git",
             "!changelog",
             "!vendor",
             "!*_test.go",
@@ -686,7 +688,9 @@ end
 
 vim.keymap.set('n', '<leader>rg', function()
     return require('telescope.builtin').live_grep({
+        additional_args = { "--hidden" },
         glob = {
+            "!.git",
             "!changelog",
             "!vendor",
             "!*_test.go",
@@ -698,7 +702,9 @@ end
 , { desc = '[S]earch source using [G]rep' })
 vim.keymap.set('n', '<leader>Rg', function()
     return require('telescope.builtin').live_grep({
+        additional_args = { "--hidden" },
         glob = {
+            "!.git",
             "!changelog",
             "!vendor",
         }
