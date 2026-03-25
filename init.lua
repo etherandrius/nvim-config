@@ -534,43 +534,54 @@ require('lualine').setup {
 -- See `:help telescope` and `:help telescope.setup()`
 
 local utils = require('telescope.utils')
-local entry_display = require("telescope.pickers.entry_display")
+local make_entry = require('telescope.make_entry')
 
-local custom_path_display = function(_, path)
-    local name = utils.path_tail(path)
-    local subtype = ""
-    if path:find('/java/com/palantir/') then
-        path = path:gsub("java/com/palantir/", "")
+local function custom_entry_maker(opts)
+    opts = opts or {}
+    local base_maker = make_entry.gen_from_file(opts)
+
+    return function(line)
+        local entry = base_maker(line)
+        if not entry then return nil end
+
+        entry.display = function(e)
+            local path = e.value
+            local name = utils.path_tail(path)
+
+            if path:find('/java/com/palantir/') then
+                path = path:gsub("java/com/palantir/", "")
+            end
+            local subtype = nil
+            if path:find('/generated/') then
+                subtype = "gen "
+                path = path:gsub("/generated/", "/G/")
+            elseif path:find('/src/test/') then
+                subtype = "test"
+                path = path:gsub("/src/test/", "/T/")
+            elseif path:find('/src/integrationTest/') then
+                subtype = "itest"
+                path = path:gsub("/src/integrationTest/", "/IT/")
+            elseif path:find('/src/main/') then
+                subtype = "src "
+                path = path:gsub("/src/main/", "/S/")
+            end
+
+            if subtype == nil then
+                local text = name .. " " .. path
+                return text, { { { #name + 1, #text }, "Comment" } }
+            else
+                local text = subtype .. " ▏" .. name .. " " .. path
+                local prefix_len = #subtype + #" ▏"
+                local path_start = prefix_len + #name + 1
+                return text, {
+                    { { 0, #subtype }, "TelescopeResultsComment" },
+                    { { path_start, #text }, "Comment" },
+                }
+            end
+        end
+
+        return entry
     end
-    if path:find('/generated/') then
-        subtype = "gen "
-        path = path:gsub("/generated/", "/G/")
-    end
-    if path:find('/src/test/') then
-        subtype = "test"
-        path = path:gsub("/src/test/", "/T/")
-    end
-    if path:find('/src/integrationTest/') then
-        subtype = "itest"
-        path = path:gsub("/src/integrationTest/", "/IT/")
-    end
-    if path:find('/src/main/') then
-        subtype = "src "
-        path = path:gsub("/src/main/", "/S/")
-    end
-    local displayer = entry_display.create({
-        separator = ' ▏',
-        items = {
-            { width = 55 },
-            { width = 5 },
-            { remaining = true },
-        },
-    })
-    return displayer({
-        name,
-        subtype,
-        path,
-    })
 end
 
 
@@ -581,22 +592,22 @@ require('telescope').setup {
 
     pickers = {
         git_files = {
-            path_display = custom_path_display
+            entry_maker = custom_entry_maker()
         },
         find_files = {
-            path_display = custom_path_display
+            entry_maker = custom_entry_maker()
         },
         oldfiles = {
-            path_display = custom_path_display
+            entry_maker = custom_entry_maker()
         },
         lsp_references = {
-            path_display = custom_path_display
+            entry_maker = custom_entry_maker()
         },
         grep_string = {
-            path_display = custom_path_display
+            entry_maker = custom_entry_maker()
         },
         live_grep = {
-            path_display = custom_path_display
+            entry_maker = custom_entry_maker()
         },
     },
     extensions = {
@@ -850,4 +861,4 @@ vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold" }, {
 vim.cmd('source ~/.config/nvim/lua-migration/testBlock.vim')
 vim.cmd('source ~/.config/nvim/spell/abbrev.vim')
 -- }}}
--- vim: foldlevel=1:foldmethod=marker
+-- vim: foldlevel=999:foldmethod=marker
