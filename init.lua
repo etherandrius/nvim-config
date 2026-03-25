@@ -359,8 +359,18 @@ nmap('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction')
 
 vim.lsp.inlay_hint.enable(false)
 nmap('<leader>ih', function()
-    vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled())
+    local new = not vim.lsp.inlay_hint.is_enabled()
+    vim.lsp.inlay_hint.enable(new)
+    print('inlay_hints: ' .. (new and 'on' or 'off'))
 end, '[I]nlay [H]ints toggle')
+
+vim.diagnostic.config({ virtual_text = true })
+vim.keymap.set('n', '<leader>ie', function()
+    local current = vim.diagnostic.config().virtual_text
+    local new = not current
+    vim.diagnostic.config({ virtual_text = new })
+    print('virtual_text: ' .. (new and 'on' or 'off'))
+end, { desc = '[I]nlay [E]rrors toggle', noremap = true, silent = true  })
 
 -- lua print(require('vim.lsp').buf_request(0, 'textDocument/typeDefinition', require('vim.lsp.util').make_position_params(), nil))
 nmap('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
@@ -426,6 +436,7 @@ local servers = {
     -- graphql = {},
     -- gradle_ls = {},
     basedpyright = {},
+    svelte = {},
     -- kotlin_language_server = {},
     -- groovyls = {}, -- Not good enough yet; Need to manually add relevant jars
     -- jdtls = {

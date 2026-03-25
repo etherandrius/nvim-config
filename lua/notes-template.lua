@@ -19,6 +19,7 @@ if value then
                     "# " .. filename,
                     "",
                     "Tags: ",
+                    "type: ",
                     "",
                     "---",
                     "",
