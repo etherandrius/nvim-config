@@ -601,13 +601,10 @@ require('telescope').setup {
             entry_maker = custom_entry_maker()
         },
         lsp_references = {
-            entry_maker = custom_entry_maker()
         },
         grep_string = {
-            entry_maker = custom_entry_maker()
         },
         live_grep = {
-            entry_maker = custom_entry_maker()
         },
     },
     extensions = {
