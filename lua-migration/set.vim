@@ -1,4 +1,6 @@
 
+set spelloptions=noplainbuffer,camel
+
 set updatetime=250
 
 set signcolumn=yes
