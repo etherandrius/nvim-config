@@ -230,13 +230,51 @@ require("lazy").setup({
             },
             config = function()
                 local harpoon = require("harpoon")
-                local git_dir = vim.fn.system("git rev-parse --git-common-dir 2>/dev/null"):gsub("\n", "")
+                local git_common_dir = vim.fn.system("git rev-parse --git-common-dir 2>/dev/null"):gsub("\n", "")
                 local harpoon_key = vim.v.shell_error == 0
-                    and vim.fn.fnamemodify(git_dir, ":p")
+                    and vim.fn.fnamemodify(git_common_dir, ":p")
                     or vim.loop.cwd()
+
+                local function get_worktree_root()
+                    return vim.fn.system("git rev-parse --show-toplevel 2>/dev/null"):gsub("\n", "")
+                end
+
+                local function rel_to_worktree(abs_path)
+                    local cwd = vim.loop.cwd():gsub("/$", "") .. "/"
+                    if abs_path:sub(1, #cwd) == cwd then
+                        return abs_path:sub(#cwd + 1)
+                    end
+                    local root = get_worktree_root():gsub("/$", "") .. "/"
+                    if abs_path:sub(1, #root) == root then
+                        return abs_path:sub(#root + 1)
+                    end
+                    return abs_path
+                end
+
                 harpoon:setup({
                     settings = {
                         key = function() return harpoon_key or "/tmp" end,
+                    },
+                    default = {
+                        create_list_item = function(config, name)
+                            name = name or rel_to_worktree(vim.api.nvim_buf_get_name(0))
+                            local bufnr = vim.fn.bufnr(name, false)
+                            local pos = (bufnr ~= -1) and vim.api.nvim_buf_get_mark(bufnr, '"') or { 1, 0 }
+                            return { value = name, context = { row = pos[1], col = pos[2] } }
+                        end,
+                        select = function(list_item, list, options)
+                            if not list_item then return end
+                            local path = list_item.value
+                            local worktree = get_worktree_root()
+                            local abs = worktree .. "/" .. path
+                            if vim.loop.fs_stat(abs) then
+                                path = abs
+                            end
+                            vim.cmd("edit " .. vim.fn.fnameescape(path))
+                            local row = list_item.context.row or 1
+                            local col = list_item.context.col or 0
+                            pcall(vim.api.nvim_win_set_cursor, 0, { row, col })
+                        end,
                     },
                 })
 
@@ -482,9 +520,24 @@ local javaPath = function()
     if path:match("jdt://") then
         path = "jdt://classpath"
     end
-    if path:match("/Users/agrabauskas/Projects/java/foundry") then
-        path = path:gsub("/Users/agrabauskas/Projects/java/foundry", "")
+    local cwd = vim.loop.cwd():gsub("/$", "")
+    if path:sub(1, #cwd) == cwd then
+        path = path:sub(#cwd + 2)
     end
+    local prefix = ""
+    local features_dir = os.getenv("FEATURES_DIR")
+    local notes_dir = os.getenv("NOTES_DIR")
+    local project_dir = os.getenv("PROJECT_DIR")
+    if features_dir and path:sub(1, #features_dir) == features_dir then
+        prefix = "FEAT/"
+        path = path:sub(#features_dir + 2)
+    elseif notes_dir and path:sub(1, #notes_dir) == notes_dir then
+        prefix = "NOTE/"
+        path = path:sub(#notes_dir + 2)
+    elseif project_dir and path:sub(1, #project_dir) == project_dir then
+        path = path:sub(#project_dir + 2)
+    end
+
     if path:match("java/com/palantir/") then
         path = path:gsub("java/com/palantir/", "J/")
     end
@@ -500,7 +553,7 @@ local javaPath = function()
     if path:match("/src/main/") then
         path = path:gsub("/src/main/", "/S/")
     end
-    return "(" .. path .. ")"
+    return "(" .. prefix .. path .. ")"
 end
 
 require('lualine').setup {
@@ -536,6 +589,27 @@ require('lualine').setup {
 local utils = require('telescope.utils')
 local make_entry = require('telescope.make_entry')
 
+local function shorten_path(path)
+    local subtype = nil
+    if path:find('java/com/palantir/') then
+        path = path:gsub("java/com/palantir/", "")
+    end
+    if path:find('/generated/') or path:match('^generated/') then
+        subtype = "gen "
+        path = path:gsub("/generated/", "/G/"):gsub("^generated/", "G/")
+    elseif path:find('/src/test/') or path:match('^src/test/') then
+        subtype = "test"
+        path = path:gsub("/src/test/", "/T/"):gsub("^src/test/", "T/")
+    elseif path:find('/src/integrationTest/') or path:match('^src/integrationTest/') then
+        subtype = "itest"
+        path = path:gsub("/src/integrationTest/", "/IT/"):gsub("^src/integrationTest/", "IT/")
+    elseif path:find('/src/main/') or path:match('^src/main/') then
+        subtype = "src "
+        path = path:gsub("/src/main/", "/S/"):gsub("^src/main/", "S/")
+    end
+    return path, subtype
+end
+
 local function custom_entry_maker(opts)
     opts = opts or {}
     local base_maker = make_entry.gen_from_file(opts)
@@ -546,25 +620,13 @@ local function custom_entry_maker(opts)
 
         entry.display = function(e)
             local path = e.value
+            local cwd = vim.loop.cwd():gsub("/$", "") .. "/"
+            if path:sub(1, #cwd) == cwd then
+                path = path:sub(#cwd + 1)
+            end
+            local subtype
+            path, subtype = shorten_path(path)
             local name = utils.path_tail(path)
-
-            if path:find('/java/com/palantir/') then
-                path = path:gsub("java/com/palantir/", "")
-            end
-            local subtype = nil
-            if path:find('/generated/') then
-                subtype = "gen "
-                path = path:gsub("/generated/", "/G/")
-            elseif path:find('/src/test/') then
-                subtype = "test"
-                path = path:gsub("/src/test/", "/T/")
-            elseif path:find('/src/integrationTest/') then
-                subtype = "itest"
-                path = path:gsub("/src/integrationTest/", "/IT/")
-            elseif path:find('/src/main/') then
-                subtype = "src "
-                path = path:gsub("/src/main/", "/S/")
-            end
 
             if subtype == nil then
                 local text = name .. " " .. path
@@ -584,6 +646,46 @@ local function custom_entry_maker(opts)
     end
 end
 
+local function custom_loc_entry_maker(base_gen, opts)
+    opts = opts or {}
+    local base_maker = base_gen(opts)
+
+    return function(line)
+        local entry = base_maker(line)
+        if not entry then return nil end
+
+        entry.display = function(e)
+            local path = e.filename or ""
+            local lnum = e.lnum or 0
+            local text = e.text or ""
+
+            local subtype
+            path, subtype = shorten_path(path)
+            local name = utils.path_tail(path)
+            local dir = path:match("^(.*/)") or ""
+
+            local loc = name .. ":" .. lnum
+            if subtype == nil then
+                local header = loc .. " " .. dir
+                local full = header .. text
+                return full, {
+                    { { #loc + 1, #header }, "Comment" },
+                }
+            else
+                local header = subtype .. " ▏" .. loc .. " " .. dir
+                local prefix_len = #subtype + #" ▏"
+                local path_start = prefix_len + #loc + 1
+                local full = header .. text
+                return full, {
+                    { { 0, #subtype }, "TelescopeResultsComment" },
+                    { { path_start, #header }, "Comment" },
+                }
+            end
+        end
+
+        return entry
+    end
+end
 
 require('telescope').setup {
     defaults = {
@@ -591,9 +693,9 @@ require('telescope').setup {
     },
 
     pickers = {
-        git_files = {
-            entry_maker = custom_entry_maker()
-        },
+        -- git_files = {
+        --     entry_maker = custom_entry_maker()
+        -- },
         find_files = {
             entry_maker = custom_entry_maker()
         },
@@ -601,10 +703,13 @@ require('telescope').setup {
             entry_maker = custom_entry_maker()
         },
         lsp_references = {
+            entry_maker = custom_loc_entry_maker(make_entry.gen_from_quickfix),
         },
         grep_string = {
+            entry_maker = custom_loc_entry_maker(make_entry.gen_from_vimgrep),
         },
         live_grep = {
+            entry_maker = custom_loc_entry_maker(make_entry.gen_from_vimgrep),
         },
     },
     extensions = {
@@ -644,10 +749,9 @@ vim.keymap.set('n', 'z=', require('telescope.builtin').spell_suggest, { desc = '
 vim.keymap.set('n', '<leader>sq', require('telescope.builtin').quickfix, { desc = '[S]earch [Q]uickfix' })
 
 vim.keymap.set('n', '<leader>t', function()
-    return require('telescope.builtin').git_files({
-        show_untracked = true,
-    })
-end, { desc = 'Search Git Files' })
+    return require('telescope.builtin').find_files({ })
+end, { desc = 'Search Files' })
+
 vim.keymap.set('n', '<leader>T', function()
     return require('telescope.builtin').find_files({
         no_ignore = true,
@@ -660,13 +764,23 @@ vim.keymap.set('n', '<leader>m', require('telescope.builtin').git_status, { desc
 vim.keymap.set('n', '<leader>sh', require('telescope.builtin').help_tags, { desc = '[S]earch [H]elp' })
 
 local findFilesForWordUnderCursor = function()
-    local word = vim.fn.expand "<cword>"
+    local word = vim.fn.expand "<cfile>"
     require('telescope.builtin').find_files({
         search_file = word,
         no_ignore = true,
+        prompt_title = "Find Files (" .. word .. ")",
     })
 end
 vim.keymap.set('n', '<leader>sf', findFilesForWordUnderCursor, { desc = '[S]earch current [F]ile' })
+vim.keymap.set('v', '<leader>sf', function()
+    vim.cmd('noau normal! "vy"')
+    local word = vim.fn.getreg('v')
+    require('telescope.builtin').find_files({
+        search_file = word,
+        no_ignore = true,
+        prompt_title = "Find Files (" .. word .. ")",
+    })
+end, { desc = '[S]earch selected [F]ile' })
 
 vim.keymap.set('n', '<leader>sw', require('telescope.builtin').grep_string, {
     desc = '[S]earch current [W]ord'
