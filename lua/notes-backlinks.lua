@@ -30,8 +30,19 @@ local function remove_refs_lines(bufnr, title_line)
   end
 end
 
+local function get_existing_refs(bufnr, title_line)
+  local found = find_refs_lines(bufnr, title_line)
+  local texts = {}
+  for _, line_nr in ipairs(found) do
+    table.insert(texts, vim.api.nvim_buf_get_lines(bufnr, line_nr, line_nr + 1, false)[1])
+  end
+  return texts
+end
+
 local function write_backlinks(bufnr, title_line, filenames)
   local refs_text = "Refs: " .. table.concat(filenames, ", ")
+  local existing = get_existing_refs(bufnr, title_line)
+  if #existing == 1 and existing[1] == refs_text then return end
   remove_refs_lines(bufnr, title_line)
   vim.api.nvim_buf_set_lines(bufnr, title_line + 1, title_line + 1, false, { refs_text })
 end
@@ -61,7 +72,9 @@ if notes_dir_value then
       if not current_title then return end
 
       if err or not result or #result == 0 then
-        remove_refs_lines(bufnr, current_title)
+        if #find_refs_lines(bufnr, current_title) > 0 then
+          remove_refs_lines(bufnr, current_title)
+        end
         return
       end
 
@@ -80,7 +93,9 @@ if notes_dir_value then
       end
 
       if #filenames == 0 then
-        remove_refs_lines(bufnr, current_title)
+        if #find_refs_lines(bufnr, current_title) > 0 then
+          remove_refs_lines(bufnr, current_title)
+        end
         return
       end
 
