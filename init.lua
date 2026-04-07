@@ -646,11 +646,17 @@ local function custom_entry_maker(opts)
     end
 end
 
-local function custom_loc_entry_maker(base_gen, opts)
-    opts = opts or {}
-    local base_maker = base_gen(opts)
+local function custom_loc_entry_maker(base_gen)
+    local base_maker = nil
+    local maker_cwd = nil
 
     return function(line)
+        local cwd = vim.loop.cwd()
+        if cwd ~= maker_cwd then
+            base_maker = base_gen({ cwd = cwd })
+            maker_cwd = cwd
+        end
+
         local entry = base_maker(line)
         if not entry then return nil end
 
