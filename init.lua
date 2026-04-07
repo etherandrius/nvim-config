@@ -948,7 +948,7 @@ vim.cmd('source ~/.config/nvim/lua-migration/plugins.vim')
 -- }}}
 -- [[ Custom ]] {{{
 require("cargo-read-only")
-require("notes-template")
+require("notes-create")
 require("notes-backlinks")
 require("notes-tags-hover")
 vim.cmd('source ~/.config/nvim/lua-migration/set.vim')

@@ -28,6 +28,8 @@ local function read_tags_from_file(filepath)
   return nil
 end
 
+local hover_seq = {}
+
 local function show_tags_hover()
   local bufnr = vim.api.nvim_get_current_buf()
   local notes_dir = get_notes_dir()
@@ -40,10 +42,12 @@ local function show_tags_hover()
     return
   end
 
+  local seq = (hover_seq[bufnr] or 0) + 1
+  hover_seq[bufnr] = seq
+
   vim.api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
 
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  local pending = 0
 
   for i, line in ipairs(lines) do
     local link_name = line:match("^%s*%[%[(.-)%]%]%s*$")
@@ -53,13 +57,13 @@ local function show_tags_hover()
       local col = line:find("%[%[")
       if col then
         col = col + 1 -- place cursor inside the [[
-        pending = pending + 1
 
         vim.lsp.buf_request(bufnr, "textDocument/definition", {
           textDocument = vim.lsp.util.make_text_document_params(bufnr),
           position = { line = line_idx, character = col },
         }, function(err, result)
-          pending = pending - 1
+          if hover_seq[bufnr] ~= seq then return end
+
           local display = "()"
 
           if not err and result then
