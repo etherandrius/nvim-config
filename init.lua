@@ -957,6 +957,7 @@ require("cargo-read-only")
 require("notes-create")
 require("notes-backlinks")
 require("notes-tags-hover")
+require("pi-send")
 vim.cmd('source ~/.config/nvim/lua-migration/set.vim')
 -- [[ Keymaps ]] {{{
 -- See `:help vim.keymap.set()`
