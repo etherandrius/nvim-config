@@ -72,7 +72,7 @@ end
 function M.send(text, submit)
   local pane = M.find_pane()
   if not pane then
-    vim.notify("No pi/claude pane found", vim.log.levels.WARN)
+    vim.notify("No Agent pane found", vim.log.levels.WARN)
     return
   end
 
