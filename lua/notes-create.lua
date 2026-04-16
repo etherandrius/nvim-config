@@ -63,6 +63,11 @@ local function create_note(opts)
 
   local title = opts.args ~= "" and opts.args or nil
 
+  if not title and opts.range == 2 then
+    local line = vim.api.nvim_buf_get_lines(0, opts.line1 - 1, opts.line2, false)
+    title = vim.trim(table.concat(line, " "))
+  end
+
   if title then
     finish_create(title, notes_dir)
   else
@@ -73,4 +78,4 @@ local function create_note(opts)
   end
 end
 
-vim.api.nvim_create_user_command("CreateNote", create_note, { nargs = "*" })
+vim.api.nvim_create_user_command("CreateNote", create_note, { nargs = "*", range = true })
