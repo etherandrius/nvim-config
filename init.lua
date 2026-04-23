@@ -156,48 +156,25 @@ require("lazy").setup({
         -- Highlight, edit, and navigate code
         {
             "nvim-treesitter/nvim-treesitter",
+            branch = "main",
+            lazy = false,
+            build = ':TSUpdate',
             config = function()
-                local configs = require("nvim-treesitter.configs")
-                configs.setup({
-                    ensure_installed = { 'java', 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'typescript', 'vimdoc', 'vim', 'graphql', 'terraform' },
-                    modules = {},
-                    ignore_install = {},
-                    auto_install = true,
-                    sync_install = false,
-                    highlight = {
-                        enable = true,
-                        additional_vim_regex_highlighting = false,
-                    },
-                    indent = { enable = true },
-                    textobjects = {
-                        select = {
-                            enable = true,
-                            lookahead = true,
-                            keymaps = {
-                                ["af"] = "@function.outer",
-                                ["if"] = "@function.inner",
-                                ["ia"] = "@parameter.inner",
-                                ["aa"] = "@parameter.outer",
-                            },
-                            include_surrounding_whitespace = function(table)
-                                local blockList = {
-                                    ["@parameter.inner"] = true,
-                                    ["@parameter.outer"] = true,
-                                    ["@function.inner"] = true,
-                                }
-                                return not blockList[table["query_string"]]
-                            end
-                        },
-                    },
+                require('nvim-treesitter').setup {}
+                -- Install parsers (async, no-op if already installed)
+                require('nvim-treesitter').install { 'java', 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'typescript', 'vimdoc', 'vim', 'graphql', 'terraform' }
+                -- Enable treesitter highlighting & indentation for all filetypes with a parser
+                vim.api.nvim_create_autocmd('FileType', {
+                    callback = function()
+                        pcall(vim.treesitter.start)
+                        if vim.treesitter.query.get(vim.bo.filetype, 'indents') then
+                            vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+                        end
+                    end,
                 })
             end
         },
-        {
-            'nvim-treesitter/playground',
-            dependencies = {
-                'nvim-treesitter/nvim-treesitter'
-            },
-        },
+        -- NOTE: playground is replaced by built-in :InspectTree in Neovim 0.12+
         { 'kmonad/kmonad-vim' },           -- kmonad syntax highlight
         {
             'norcalli/nvim-colorizer.lua', -- #e8ffd1
@@ -216,7 +193,36 @@ require("lazy").setup({
         { 'numToStr/Comment.nvim' }, -- "gc" to comment visual regions/lines
         {
             'nvim-treesitter/nvim-treesitter-textobjects',
+            branch = 'main',
             dependencies = 'nvim-treesitter',
+            config = function()
+                require('nvim-treesitter-textobjects').setup {
+                    select = {
+                        lookahead = true,
+                        include_surrounding_whitespace = function(tbl)
+                            local blockList = {
+                                ["@parameter.inner"] = true,
+                                ["@parameter.outer"] = true,
+                                ["@function.inner"] = true,
+                            }
+                            return not blockList[tbl["query_string"]]
+                        end,
+                    },
+                }
+                -- Textobject keymaps
+                vim.keymap.set({ "x", "o" }, "af", function()
+                    require('nvim-treesitter-textobjects.select').select_textobject("@function.outer", "textobjects")
+                end)
+                vim.keymap.set({ "x", "o" }, "if", function()
+                    require('nvim-treesitter-textobjects.select').select_textobject("@function.inner", "textobjects")
+                end)
+                vim.keymap.set({ "x", "o" }, "aa", function()
+                    require('nvim-treesitter-textobjects.select').select_textobject("@parameter.outer", "textobjects")
+                end)
+                vim.keymap.set({ "x", "o" }, "ia", function()
+                    require('nvim-treesitter-textobjects.select').select_textobject("@parameter.inner", "textobjects")
+                end)
+            end,
         },
         -- navigation
         { 'jremmen/vim-ripgrep' },
@@ -295,7 +301,7 @@ require("lazy").setup({
             end
         },
         { 'ggandor/lightspeed.nvim' }, -- type where you look
-        { 'nvim-telescope/telescope.nvim',            branch = '0.1.x', dependencies = { 'nvim-lua/plenary.nvim' } },
+        { 'nvim-telescope/telescope.nvim',            dependencies = { 'nvim-lua/plenary.nvim' } },
         { 'nvim-telescope/telescope-fzf-native.nvim', build = 'make' },
         { 'nvim-telescope/telescope-ui-select.nvim' }, -- vim.ui.select = telescope; overrides some vim default
         -- Rust
