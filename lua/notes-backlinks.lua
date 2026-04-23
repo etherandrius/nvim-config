@@ -52,55 +52,56 @@ if notes_dir_value then
   notes_dir_value = notes_dir_value:gsub("/$", "")
   local notes_dir = vim.fn.expand(notes_dir_value)
 
-  local pending = {}
-
   local function fetch_backlinks(bufnr)
     local title_line = find_first_heading(bufnr)
     if not title_line then return end
 
-    local seq = (pending[bufnr] or 0) + 1
-    pending[bufnr] = seq
+    local current_path = vim.api.nvim_buf_get_name(bufnr)
+    local current_name = current_path:match("([^/]+)%.md$")
+    if not current_name then return end
 
-    vim.lsp.buf_request(bufnr, 'textDocument/references', {
-      textDocument = vim.lsp.util.make_text_document_params(bufnr),
-      position = { line = title_line, character = 0 },
-      context = { includeDeclaration = true }
-    }, function(err, result)
-      if pending[bufnr] ~= seq then return end
+    local pattern = "%[%[" .. vim.pesc(current_name) .. "%]%]"
 
-      local current_title = find_first_heading(bufnr)
-      if not current_title then return end
+    -- grep notes dir in background to avoid blocking
+    vim.system(
+      { "grep", "-rl", "--include=*.md", "\\[\\[" .. current_name .. "\\]\\]", notes_dir },
+      {},
+      vim.schedule_wrap(function(result)
+        -- buffer may have been closed
+        if not vim.api.nvim_buf_is_valid(bufnr) then return end
 
-      if err or not result or #result == 0 then
-        if #find_refs_lines(bufnr, current_title) > 0 then
-          remove_refs_lines(bufnr, current_title)
+        local current_title = find_first_heading(bufnr)
+        if not current_title then return end
+
+        if result.code ~= 0 or not result.stdout or result.stdout == "" then
+          if #find_refs_lines(bufnr, current_title) > 0 then
+            remove_refs_lines(bufnr, current_title)
+          end
+          return
         end
-        return
-      end
 
-      local current_path = vim.api.nvim_buf_get_name(bufnr)
-      local filenames = {}
-      local seen = {}
-      for _, loc in ipairs(result) do
-        local abs = loc.uri:gsub("^file://", "")
-        if abs ~= current_path then
-          local rel = abs:gsub("^" .. vim.pesc(notes_dir) .. "/", ""):gsub("%.md$", "")
-          if not seen[rel] then
-            table.insert(filenames, rel)
-            seen[rel] = true
+        local filenames = {}
+        local seen = {}
+        for abs in result.stdout:gmatch("[^\n]+") do
+          if abs ~= current_path then
+            local rel = abs:gsub("^" .. vim.pesc(notes_dir) .. "/", ""):gsub("%.md$", "")
+            if not seen[rel] then
+              table.insert(filenames, rel)
+              seen[rel] = true
+            end
           end
         end
-      end
 
-      if #filenames == 0 then
-        if #find_refs_lines(bufnr, current_title) > 0 then
-          remove_refs_lines(bufnr, current_title)
+        if #filenames == 0 then
+          if #find_refs_lines(bufnr, current_title) > 0 then
+            remove_refs_lines(bufnr, current_title)
+          end
+          return
         end
-        return
-      end
 
-      write_backlinks(bufnr, current_title, filenames)
-    end)
+        write_backlinks(bufnr, current_title, filenames)
+      end)
+    )
   end
 
   local function is_note(bufnr)

@@ -10,7 +10,7 @@ return {
         vim.opt.runtimepath:append(hippo_path .. "/hippo-nvim")
         require("hippo").setup({
             notes_dir = os.getenv("NOTES_DIR"),
-            log_level = "debug",
+            log_level = "warn",
         })
     end,
 }

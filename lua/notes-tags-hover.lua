@@ -53,42 +53,18 @@ local function show_tags_hover()
     local link_name = line:match("^%s*%[%[(.-)%]%]%s*$")
     if link_name then
       local line_idx = i - 1
-      -- Find the position of the link text for LSP go-to-definition
-      local col = line:find("%[%[")
-      if col then
-        col = col + 1 -- place cursor inside the [[
+      local target_path = notes_dir .. "/" .. link_name .. ".md"
+      local display = "()"
 
-        vim.lsp.buf_request(bufnr, "textDocument/definition", {
-          textDocument = vim.lsp.util.make_text_document_params(bufnr),
-          position = { line = line_idx, character = col },
-        }, function(err, result)
-          if hover_seq[bufnr] ~= seq then return end
-
-          local display = "()"
-
-          if not err and result then
-            -- result can be a single Location or a list
-            local loc = result
-            if vim.islist(result) and #result > 0 then
-              loc = result[1]
-            end
-
-            local uri = loc and (loc.uri or loc.targetUri)
-            if uri then
-              local target_path = vim.uri_to_fname(uri)
-              local tags = read_tags_from_file(target_path)
-              if tags and #tags > 0 then
-                display = table.concat(tags, ", ")
-              end
-            end
-          end
-
-          vim.api.nvim_buf_set_extmark(bufnr, ns_id, line_idx, 0, {
-            virt_text = { { display, "Comment" } },
-            virt_text_pos = "eol",
-          })
-        end)
+      local tags = read_tags_from_file(target_path)
+      if tags and #tags > 0 then
+        display = table.concat(tags, ", ")
       end
+
+      vim.api.nvim_buf_set_extmark(bufnr, ns_id, line_idx, 0, {
+        virt_text = { { display, "Comment" } },
+        virt_text_pos = "eol",
+      })
     end
   end
 end
