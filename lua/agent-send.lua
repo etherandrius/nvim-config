@@ -81,11 +81,11 @@ function M.find_pane()
   return cur_win_match or same_cwd_match
 end
 
---- Send text to the nearest pi pane. If submit is true, press Enter after.
-function M.send(text, submit)
-  local pane = M.find_pane()
+--- Send text to the given pane (or find one). If submit is true, press Enter after.
+function M.send(text, submit, pane)
+  pane = pane or M.find_pane()
   if not pane then
-    vim.notify("No Agent pane found", vim.log.levels.WARN)
+    vim.notify("No Agent pane found", vim.log.levels.ERROR)
     return
   end
 
@@ -117,26 +117,66 @@ local function get_buffer()
   return table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")
 end
 
--- Keymaps
-vim.keymap.set("v", "<leader>ps", function()
-  local text = get_visual()
+-- Shared popup for adding context before sending
+--- Detect the agent name running in a pane.
+local function agent_name_for_pane(pane)
+  local info = tmux("display-message", "-p", "-t", pane, "#{pane_current_command}\t#{pane_pid}")
+  if not info then return "agent" end
+  local cmd, pid = info:match("^([^\t]+)\t(%d+)$")
+  if cmd and pi_commands[cmd] then return cmd end
+  -- For node-based agents, check child processes
+  if cmd == "node" and pid then
+    local children = vim.fn.system({ "pgrep", "-P", pid })
+    if vim.v.shell_error == 0 then
+      for cpid in children:gmatch("%d+") do
+        local comm = vim.trim(vim.fn.system({ "ps", "-o", "comm=", "-p", cpid }))
+        if vim.v.shell_error == 0 then
+          local base = comm:match("[^/]+$")
+          if base and pi_commands[base] then return base end
+        end
+      end
+    end
+  end
+  return "agent"
+end
+
+local function prompt_and_send(text)
+  local pane = M.find_pane()
+  if not pane then
+    vim.notify("No Agent pane found", vim.log.levels.WARN)
+    return
+  end
+  local name = agent_name_for_pane(pane)
   local buf = vim.api.nvim_create_buf(false, true)
   local width = math.floor(vim.o.columns * 0.6)
+  local min_height = 3
+  local max_height = math.floor(vim.o.lines * 0.4)
   local win = vim.api.nvim_open_win(buf, true, {
     relative = "editor",
     row = math.floor(vim.o.lines * 0.3),
     col = math.floor((vim.o.columns - width) / 2),
     width = width,
-    height = 1,
+    height = min_height,
     style = "minimal",
     border = "rounded",
-    title = " Context ",
+    title = " Send to -> " .. name .. " ",
     title_pos = "center",
   })
   vim.bo[buf].buftype = "nofile"
   vim.cmd("startinsert")
 
-  local function submit()
+  -- Auto-resize as text grows
+  vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
+    buffer = buf,
+    callback = function()
+      if not vim.api.nvim_win_is_valid(win) then return end
+      local line_count = vim.api.nvim_buf_line_count(buf)
+      local new_height = math.max(min_height, math.min(line_count, max_height))
+      vim.api.nvim_win_set_height(win, new_height)
+    end,
+  })
+
+  local function do_send(submit_flag)
     local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
     local ctx = table.concat(lines, "\n")
     vim.api.nvim_win_close(win, true)
@@ -144,7 +184,7 @@ vim.keymap.set("v", "<leader>ps", function()
     if ctx ~= "" then
       text = ctx .. "\n\n" .. text
     end
-    M.send(text, false)
+    M.send(text, submit_flag, pane)
   end
 
   local function cancel()
@@ -152,14 +192,20 @@ vim.keymap.set("v", "<leader>ps", function()
     vim.api.nvim_buf_delete(buf, { force = true })
   end
 
-  vim.keymap.set("i", "<CR>", submit, { buffer = buf })
-  vim.keymap.set("n", "<CR>", submit, { buffer = buf })
+  -- Enter: send without submitting
+  vim.keymap.set("i", "<CR>", function() do_send(false) end, { buffer = buf })
+  vim.keymap.set("n", "<CR>", function() do_send(false) end, { buffer = buf })
+  -- Shift+Enter: send and kick off agent
+  vim.keymap.set("i", "<S-CR>", function() do_send(true) end, { buffer = buf })
+  vim.keymap.set("n", "<S-CR>", function() do_send(true) end, { buffer = buf })
   vim.keymap.set("n", "<Esc>", cancel, { buffer = buf })
   vim.keymap.set("n", "q", cancel, { buffer = buf })
-end, { desc = "Send selection to agent with context" })
-vim.keymap.set("v", "<leader>pr", function() M.send(get_visual(), true) end,
-  { desc = "Send selection to pi and submit" })
-vim.keymap.set("n", "<leader>pb", function() M.send(get_buffer(), false) end,
+end
+
+-- Keymaps
+vim.keymap.set("v", "<leader>ps", function() prompt_and_send(get_visual()) end,
+  { desc = "Send selection to agent with context" })
+vim.keymap.set("n", "<leader>pb", function() prompt_and_send(get_buffer()) end,
   { desc = "Send buffer to pi" })
 
 return M

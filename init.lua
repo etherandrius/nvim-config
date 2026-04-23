@@ -613,7 +613,7 @@ local function shorten_path(path)
         subtype = "src "
         path = path:gsub("/src/main/", "/S/"):gsub("^src/main/", "S/")
     end
-    return path, subtype
+    return path, subtype 
 end
 
 local function custom_entry_maker(opts)
