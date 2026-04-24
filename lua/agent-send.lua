@@ -12,23 +12,37 @@ local M = {}
 
 local pi_commands = { pi = true, claude = true }
 
---- Check if a pane is running pi/claude.
---- On macOS both appear as "node" in pane_current_command because the
---- actual binary is node. The pane_pid is the shell, so we check its
---- direct children via pgrep.
-local function is_agent_cmd(cmd, pid)
-  if pi_commands[cmd] then return true end
-  if cmd ~= "node" or not pid then return false end
+--- Walk direct children of pid and detect which agent (if any) is running.
+--- Returns the agent name ("pi", "claude") or nil.
+--- On macOS claude runs as `node .../claude-code/cli.js`, so comm is "node" —
+--- fall back to scanning the full command line for a path-component match.
+local function find_agent_in_children(pid)
+  if not pid then return nil end
   local children = vim.fn.system({ "pgrep", "-P", pid })
-  if vim.v.shell_error ~= 0 then return false end
+  if vim.v.shell_error ~= 0 then return nil end
   for cpid in children:gmatch("%d+") do
     local comm = vim.trim(vim.fn.system({ "ps", "-o", "comm=", "-p", cpid }))
     if vim.v.shell_error == 0 then
       local base = comm:match("[^/]+$")
-      if base and pi_commands[base] then return true end
+      if base and pi_commands[base] then return base end
+    end
+    local args = vim.fn.system({ "ps", "-o", "command=", "-p", cpid })
+    if vim.v.shell_error == 0 then
+      for name in pairs(pi_commands) do
+        if args:match("/" .. name .. "[%s%-/%.]") or args:match("/" .. name .. "$") then
+          return name
+        end
+      end
     end
   end
-  return false
+  return nil
+end
+
+--- Check if a pane is running pi/claude.
+local function is_agent_cmd(cmd, pid)
+  if pi_commands[cmd] then return true end
+  if cmd ~= "node" then return false end
+  return find_agent_in_children(pid) ~= nil
 end
 
 --- Run a tmux command and return trimmed stdout, or nil on failure.
@@ -124,18 +138,8 @@ local function agent_name_for_pane(pane)
   if not info then return "agent" end
   local cmd, pid = info:match("^([^\t]+)\t(%d+)$")
   if cmd and pi_commands[cmd] then return cmd end
-  -- For node-based agents, check child processes
   if cmd == "node" and pid then
-    local children = vim.fn.system({ "pgrep", "-P", pid })
-    if vim.v.shell_error == 0 then
-      for cpid in children:gmatch("%d+") do
-        local comm = vim.trim(vim.fn.system({ "ps", "-o", "comm=", "-p", cpid }))
-        if vim.v.shell_error == 0 then
-          local base = comm:match("[^/]+$")
-          if base and pi_commands[base] then return base end
-        end
-      end
-    end
+    return find_agent_in_children(pid) or "agent"
   end
   return "agent"
 end
