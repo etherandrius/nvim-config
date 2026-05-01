@@ -153,7 +153,7 @@ local function prompt_and_send(text)
   local name = agent_name_for_pane(pane)
   local buf = vim.api.nvim_create_buf(false, true)
   local width = math.floor(vim.o.columns * 0.6)
-  local min_height = 3
+  local min_height = 1
   local max_height = math.floor(vim.o.lines * 0.4)
   local win = vim.api.nvim_open_win(buf, true, {
     relative = "editor",
