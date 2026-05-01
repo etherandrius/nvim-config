@@ -39,9 +39,11 @@ local function find_agent_in_children(pid)
 end
 
 --- Check if a pane is running pi/claude.
+-- pane_current_command reads ucomm/proc title, which agents may rewrite —
+-- e.g. claude sets it to its version ("2.1.121"). So if the direct match
+-- fails, always walk the pane's children rather than gating on "node".
 local function is_agent_cmd(cmd, pid)
   if pi_commands[cmd] then return true end
-  if cmd ~= "node" then return false end
   return find_agent_in_children(pid) ~= nil
 end
 
@@ -138,7 +140,7 @@ local function agent_name_for_pane(pane)
   if not info then return "agent" end
   local cmd, pid = info:match("^([^\t]+)\t(%d+)$")
   if cmd and pi_commands[cmd] then return cmd end
-  if cmd == "node" and pid then
+  if pid then
     return find_agent_in_children(pid) or "agent"
   end
   return "agent"
