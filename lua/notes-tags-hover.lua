@@ -9,26 +9,99 @@ local function get_notes_dir()
   return vim.fn.expand(value)
 end
 
-local function read_tags_from_file(filepath)
-  local f = io.open(filepath, "r")
-  if not f then
-    return nil
+local function relative_time(mtime)
+  local now = os.time()
+  local diff = now - mtime
+  if diff < 0 then
+    return "just now"
   end
-  local tags = {}
-  for line in f:lines() do
-    if line:match("^Tags:") then
-      for tag in line:gmatch("%[%[(.-)%]%]") do
-        table.insert(tags, tag)
-      end
-      f:close()
-      return tags
-    end
+
+  local minutes = math.floor(diff / 60)
+  local hours = math.floor(diff / 3600)
+  local days = math.floor(diff / 86400)
+  local months = math.floor(diff / 2592000)
+  local years = math.floor(diff / 31536000)
+
+  if diff < 60 then
+    return "just now"
+  elseif minutes == 1 then
+    return "1 minute ago"
+  elseif minutes < 60 then
+    return minutes .. " minutes ago"
+  elseif hours == 1 then
+    return "1 hour ago"
+  elseif hours < 24 then
+    return hours .. " hours ago"
+  elseif days == 1 then
+    return "1 day ago"
+  elseif days < 30 then
+    return days .. " days ago"
+  elseif months == 1 then
+    return "1 month ago"
+  elseif months < 12 then
+    return months .. " months ago"
+  elseif years == 1 then
+    return "1 year ago"
+  else
+    return years .. " years ago"
   end
-  f:close()
-  return nil
 end
 
 local hover_seq = {}
+
+local function resolve_link_async(bufnr, line_idx, col, seq)
+  if hover_seq[bufnr] ~= seq then
+    return
+  end
+
+  local params = {
+    textDocument = vim.lsp.util.make_text_document_params(bufnr),
+    position = { line = line_idx, character = col },
+  }
+
+  vim.lsp.buf_request(bufnr, "textDocument/definition", params, function(err, result)
+    if hover_seq[bufnr] ~= seq then
+      return
+    end
+    if err or not result then
+      return
+    end
+
+    -- result can be a single Location or a list of Locations/LocationLinks
+    local items = vim.islist(result) and result or { result }
+    if #items == 0 then
+      return
+    end
+
+    local uri = items[1].uri or items[1].targetUri
+    if not uri then
+      return
+    end
+
+    local filepath = vim.uri_to_fname(uri)
+    local stat = vim.uv.fs_stat(filepath)
+    local display
+    if stat then
+      display = "· " .. relative_time(stat.mtime.sec)
+    else
+      display = "· not found"
+    end
+
+    -- Schedule UI update back on main loop
+    vim.schedule(function()
+      if hover_seq[bufnr] ~= seq then
+        return
+      end
+      if not vim.api.nvim_buf_is_valid(bufnr) then
+        return
+      end
+      vim.api.nvim_buf_set_extmark(bufnr, ns_id, line_idx, 0, {
+        virt_text = { { display, "Comment" } },
+        virt_text_pos = "eol",
+      })
+    end)
+  end)
+end
 
 local function show_tags_hover()
   local bufnr = vim.api.nvim_get_current_buf()
@@ -50,28 +123,23 @@ local function show_tags_hover()
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
 
   for i, line in ipairs(lines) do
-    local link_name = line:match("^%s*%[%[(.-)%]%]%s*$")
-    if link_name then
+    local start, _, link_name = line:find("%[%[(.-)%]%]")
+    if link_name and line:match("^%s*%[%[.-%]%]%s*$") then
       local line_idx = i - 1
-      local target_path = notes_dir .. "/" .. link_name .. ".md"
-      local display = "()"
-
-      local tags = read_tags_from_file(target_path)
-      if tags and #tags > 0 then
-        display = table.concat(tags, ", ")
-      end
-
-      vim.api.nvim_buf_set_extmark(bufnr, ns_id, line_idx, 0, {
-        virt_text = { { display, "Comment" } },
-        virt_text_pos = "eol",
-      })
+      -- Place cursor inside the link text (after [[)
+      local col = start + 1
+      resolve_link_async(bufnr, line_idx, col, seq)
     end
   end
 end
 
 local notes_dir = get_notes_dir()
 if notes_dir then
-  vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost" }, {
+  vim.api.nvim_create_autocmd("LspAttach", {
+    pattern = "*.md",
+    callback = show_tags_hover,
+  })
+  vim.api.nvim_create_autocmd("BufWritePost", {
     pattern = "*.md",
     callback = show_tags_hover,
   })
