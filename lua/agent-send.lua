@@ -1,7 +1,7 @@
--- pi-send.lua — find nearest pi/claude tmux pane and send text to it
+-- agent-send.lua — find nearest codex/pi/claude tmux pane and send text to it
 --
 -- Priority for finding the pane:
---   1. Marked pane (if running pi/claude)
+--   1. Marked pane (if running codex/pi/claude)
 --   2. Agent pane in the current window
 --   3. Agent pane with the same cwd
 --   4. No match → nil
@@ -10,41 +10,81 @@
 
 local M = {}
 
-local pi_commands = { pi = true, claude = true }
+local agent_commands = { codex = true, pi = true, claude = true }
+local agent_command_patterns = {
+  codex = {
+    "/codex[%s%-/%.]",
+    "/codex$",
+    "@openai/codex",
+  },
+  pi = {
+    "/pi[%s%-/%.]",
+    "/pi$",
+  },
+  claude = {
+    "/claude[%s%-/%.]",
+    "/claude$",
+    "claude%-code",
+  },
+}
 
---- Walk direct children of pid and detect which agent (if any) is running.
---- Returns the agent name ("pi", "claude") or nil.
---- On macOS claude runs as `node .../claude-code/cli.js`, so comm is "node" —
---- fall back to scanning the full command line for a path-component match.
-local function find_agent_in_children(pid)
-  if not pid then return nil end
-  local children = vim.fn.system({ "pgrep", "-P", pid })
-  if vim.v.shell_error ~= 0 then return nil end
-  for cpid in children:gmatch("%d+") do
-    local comm = vim.trim(vim.fn.system({ "ps", "-o", "comm=", "-p", cpid }))
-    if vim.v.shell_error == 0 then
-      local base = comm:match("[^/]+$")
-      if base and pi_commands[base] then return base end
-    end
-    local args = vim.fn.system({ "ps", "-o", "command=", "-p", cpid })
-    if vim.v.shell_error == 0 then
-      for name in pairs(pi_commands) do
-        if args:match("/" .. name .. "[%s%-/%.]") or args:match("/" .. name .. "$") then
-          return name
-        end
+local function detect_agent_name(text)
+  if not text or text == "" then return nil end
+
+  local base = text:match("[^/]+$") or text
+  if agent_commands[base] then return base end
+
+  for name, patterns in pairs(agent_command_patterns) do
+    for _, pattern in ipairs(patterns) do
+      if text:match(pattern) then
+        return name
       end
     end
   end
+
   return nil
 end
 
---- Check if a pane is running pi/claude.
+--- Walk a process tree and detect which agent (if any) is running.
+--- Returns the agent name ("codex", "pi", "claude") or nil.
+--- Wrapper CLIs often show up as `node`, so scan both the process name and
+--- the full command line, then recurse into descendants.
+local function find_agent_in_process_tree(pid, seen)
+  if not pid then return nil end
+  pid = tostring(pid)
+  seen = seen or {}
+  if seen[pid] then return nil end
+  seen[pid] = true
+
+  local comm = vim.trim(vim.fn.system({ "ps", "-o", "comm=", "-p", pid }))
+  if vim.v.shell_error == 0 then
+    local name = detect_agent_name(comm)
+    if name then return name end
+  end
+
+  local args = vim.trim(vim.fn.system({ "ps", "-o", "command=", "-p", pid }))
+  if vim.v.shell_error == 0 then
+    local name = detect_agent_name(args)
+    if name then return name end
+  end
+
+  local children = vim.fn.system({ "pgrep", "-P", pid })
+  if vim.v.shell_error ~= 0 then return nil end
+
+  for cpid in children:gmatch("%d+") do
+    local name = find_agent_in_process_tree(cpid, seen)
+    if name then return name end
+  end
+
+  return nil
+end
+
+--- Check if a pane is running codex/pi/claude.
 -- pane_current_command reads ucomm/proc title, which agents may rewrite —
 -- e.g. claude sets it to its version ("2.1.121"). So if the direct match
--- fails, always walk the pane's children rather than gating on "node".
+-- fails, walk the pane's process tree instead of gating on one wrapper name.
 local function is_agent_cmd(cmd, pid)
-  if pi_commands[cmd] then return true end
-  return find_agent_in_children(pid) ~= nil
+  return detect_agent_name(cmd) ~= nil or find_agent_in_process_tree(pid) ~= nil
 end
 
 --- Run a tmux command and return trimmed stdout, or nil on failure.
@@ -60,7 +100,7 @@ local function tmux_var(fmt)
   return tmux("display-message", "-p", fmt)
 end
 
---- Find the best pi/claude pane. Returns pane_id or nil.
+--- Find the best codex/pi/claude pane. Returns pane_id or nil.
 function M.find_pane()
   local session = tmux_var("#{session_name}")
   local cur_window = tmux_var("#{window_id}")
@@ -139,11 +179,7 @@ local function agent_name_for_pane(pane)
   local info = tmux("display-message", "-p", "-t", pane, "#{pane_current_command}\t#{pane_pid}")
   if not info then return "agent" end
   local cmd, pid = info:match("^([^\t]+)\t(%d+)$")
-  if cmd and pi_commands[cmd] then return cmd end
-  if pid then
-    return find_agent_in_children(pid) or "agent"
-  end
-  return "agent"
+  return detect_agent_name(cmd) or (pid and find_agent_in_process_tree(pid)) or "agent"
 end
 
 local function prompt_and_send(text)
@@ -187,6 +223,7 @@ local function prompt_and_send(text)
     local ctx = table.concat(lines, "\n")
     vim.api.nvim_win_close(win, true)
     vim.api.nvim_buf_delete(buf, { force = true })
+    vim.cmd("stopinsert")
     if ctx ~= "" then
       text = ctx .. "\n\n" .. text
     end
@@ -196,14 +233,15 @@ local function prompt_and_send(text)
   local function cancel()
     vim.api.nvim_win_close(win, true)
     vim.api.nvim_buf_delete(buf, { force = true })
+    vim.cmd("stopinsert")
   end
 
-  -- Enter: send without submitting
+  -- Enter: send and submit
   vim.keymap.set("i", "<CR>", function() do_send(false) end, { buffer = buf })
   vim.keymap.set("n", "<CR>", function() do_send(false) end, { buffer = buf })
-  -- Shift+Enter: send and kick off agent
-  vim.keymap.set("i", "<S-CR>", function() do_send(true) end, { buffer = buf })
-  vim.keymap.set("n", "<S-CR>", function() do_send(true) end, { buffer = buf })
+  -- -- Ctrl+Enter / Ctrl+s: send without submitting (paste only)
+  -- vim.keymap.set("i", "<C-s>", function() do_send(false) end, { buffer = buf })
+  -- vim.keymap.set("n", "<C-s>", function() do_send(false) end, { buffer = buf })
   vim.keymap.set("n", "<Esc>", cancel, { buffer = buf })
   vim.keymap.set("n", "q", cancel, { buffer = buf })
 end
@@ -212,6 +250,6 @@ end
 vim.keymap.set("v", "<leader>ps", function() prompt_and_send(get_visual()) end,
   { desc = "Send selection to agent with context" })
 vim.keymap.set("n", "<leader>pb", function() prompt_and_send(get_buffer()) end,
-  { desc = "Send buffer to pi" })
+  { desc = "Send buffer to agent" })
 
 return M
