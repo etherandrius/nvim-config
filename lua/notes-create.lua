@@ -13,7 +13,7 @@ local function slugify(title)
   return title:lower():gsub("%s+", "-"):gsub("[^%w%-]", "")
 end
 
-local function finish_create(title, notes_dir)
+local function finish_create(title, notes_dir, region)
   local current_file = vim.fn.expand("%:p")
   local current_dir = vim.fn.expand("%:p:h")
   local in_note = is_in_notes(current_file, notes_dir)
@@ -46,8 +46,14 @@ local function finish_create(title, notes_dir)
 
     if in_note then
       local link_name = vim.fn.fnamemodify(filepath, ":t:r")
-      local row = vim.api.nvim_win_get_cursor(0)[1]
-      vim.api.nvim_buf_set_lines(0, row, row, false, { "[[" .. link_name .. "]]" })
+      local link = "[[" .. link_name .. "]]"
+      if region then
+        vim.api.nvim_buf_set_text(0, region[1], region[2], region[3], region[4], { link })
+      else
+        local row = vim.api.nvim_win_get_cursor(0)[1]
+        vim.api.nvim_buf_set_lines(0, row, row, false, { link })
+      end
+      vim.cmd("silent write")
     end
 
     vim.cmd("edit " .. vim.fn.fnameescape(filepath))
@@ -62,14 +68,25 @@ local function create_note(opts)
   end
 
   local title = opts.args ~= "" and opts.args or nil
+  local region = nil
 
   if not title and opts.range == 2 then
-    local line = vim.api.nvim_buf_get_lines(0, opts.line1 - 1, opts.line2, false)
-    title = vim.trim(table.concat(line, " "))
+    if vim.fn.visualmode() == "v" then
+      local srow, scol = unpack(vim.api.nvim_buf_get_mark(0, "<"))
+      local erow, ecol = unpack(vim.api.nvim_buf_get_mark(0, ">"))
+      local last_line = vim.api.nvim_buf_get_lines(0, erow - 1, erow, false)[1] or ""
+      ecol = math.min(ecol + 1, #last_line)
+      local text = vim.api.nvim_buf_get_text(0, srow - 1, scol, erow - 1, ecol, {})
+      title = vim.trim(table.concat(text, " "))
+      region = { srow - 1, scol, erow - 1, ecol }
+    else
+      local line = vim.api.nvim_buf_get_lines(0, opts.line1 - 1, opts.line2, false)
+      title = vim.trim(table.concat(line, " "))
+    end
   end
 
   if title then
-    finish_create(title, notes_dir)
+    finish_create(title, notes_dir, region)
   else
     vim.ui.input({ prompt = "Title: " }, function(t)
       if not t or t == "" then return end
