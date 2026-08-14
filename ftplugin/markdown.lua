@@ -1,4 +1,8 @@
 vim.opt_local.wrap = true
+-- Scroll by screen line rather than whole wrapped lines, so <C-E>/<C-Y> (and
+-- anything built on them, e.g. `ze`) land where you asked instead of jumping a
+-- whole paragraph.
+vim.opt_local.smoothscroll = true
 vim.opt_local.linebreak = true
 vim.opt_local.breakindent = true
 vim.opt_local.spell = true

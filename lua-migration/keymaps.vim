@@ -95,13 +95,64 @@ nnoremap <leader>H <C-w>H
 " }}}
 " ZE - z eye level (like zz, zt, zb) {{{
 
-" quarter scroll
-function! ScrollQ()
-    let height=winheight(0)
-    execute 'normal! ' . height/4 . "\<C-E>"
+" Put the original cursor position back into whatever the view currently is and
+" report which screen line it lands on. winrestview() sets the cursor and the
+" viewport independently, so 'scrolloff' cannot drag the cursor along - which is
+" what let <C-E> walk the cursor off its line near the end of a buffer or past a
+" tall wrapped line.
+function! s:EyePin(save)
+  let view = winsaveview()
+  let view.lnum = a:save.lnum
+  let view.col = a:save.col
+  let view.coladd = a:save.coladd
+  let view.curswant = a:save.curswant
+  call winrestview(view)
+  return winline()
 endfunction
-nnoremap <silent> ze zz:call ScrollQ()<CR>" z eye level
-vnoremap <silent> ze <C-c>zz:call ScrollQ()<CR>gv
+
+" Put the cursor line a quarter of the window down ("eye level"), the same way
+" zz/zt/zb put it in the middle/top/bottom.
+"
+" Scrolls one step at a time and re-measures instead of firing a fixed number of
+" <C-E> after zz. That fixed count assumed one <C-E> == one screen line and that
+" the scroll always succeeds, which is false with 'wrap' on (without
+" 'smoothscroll' a single <C-E> skips a whole wrapped line) and at the ends of
+" the buffer, where the window is not fully covered by lines.
+function! ScrollEye()
+  let target = winheight(0) / 4 + 1
+  let save = winsaveview()
+  let guard = winheight(0) * 2
+
+  let best = s:EyePin(save)
+  let bestview = winsaveview()
+
+  while guard > 0 && best != target
+    let guard -= 1
+    let from = [line('w0'), winsaveview().skipcol]
+    execute 'normal! ' . (best > target ? "\<C-E>" : "\<C-Y>")
+
+    " Nothing moved: top or bottom of the buffer, eye level is unreachable.
+    if [line('w0'), winsaveview().skipcol] == from
+      break
+    endif
+
+    " A wrapped line jumped us past eye level (or nowhere nearer to it): stop
+    " and keep the closest view instead of oscillating around the target.
+    let now = s:EyePin(save)
+    if abs(now - target) >= abs(best - target)
+      break
+    endif
+
+    let best = now
+    let bestview = winsaveview()
+  endwhile
+
+  call winrestview(bestview)
+endfunction
+
+" z eye level
+nnoremap <silent> ze <Cmd>call ScrollEye()<CR>
+xnoremap <silent> ze <Cmd>call ScrollEye()<CR>
 
 " }}}
 " Indent based navigation {{{
