@@ -66,6 +66,10 @@ local config = {
                                 {
                                     sha256 = '7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172',
                                     allowed = true
+                                },
+                                {
+                                    sha256 = '7a9ce74cff467ca1bf60a4fcd9f05185acceda4d0f382434d393e17864262c5d',
+                                    allowed = true
                                 }
                             }
                         }

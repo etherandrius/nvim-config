@@ -160,10 +160,12 @@ end
 
 --- Get visual selection wrapped in a fenced code block with file context.
 local function get_visual()
-  local start_line = vim.fn.line("'<")
   local path = vim.api.nvim_buf_get_name(0)
   local ext = vim.fn.fnamemodify(path, ":e")
   vim.cmd('normal! "zy')
+  -- Read '< only after the yank exits visual mode; the marks are set when
+  -- Visual mode stops, so reading earlier returns the previous selection.
+  local start_line = vim.fn.line("'<")
   local text = vim.fn.getreg("z")
   return path .. ":" .. start_line .. "\n```" .. ext .. "\n" .. text .. "\n```"
 end

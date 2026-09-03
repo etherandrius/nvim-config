@@ -161,8 +161,23 @@ require("lazy").setup({
             build = ':TSUpdate',
             config = function()
                 require('nvim-treesitter').setup {}
+
+                -- tmux is not bundled with nvim-treesitter, so register its parser.
+                vim.api.nvim_create_autocmd('User', {
+                    pattern = 'TSUpdate',
+                    callback = function()
+                        require('nvim-treesitter.parsers').tmux = {
+                            install_info = {
+                                url = 'https://github.com/Freed-Wu/tree-sitter-tmux',
+                                generate = true,
+                                queries = 'queries',
+                            },
+                        }
+                    end,
+                })
+
                 -- Install parsers (async, no-op if already installed)
-                require('nvim-treesitter').install { 'java', 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'typescript', 'vimdoc', 'vim', 'graphql', 'terraform' }
+                require('nvim-treesitter').install { 'java', 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'typescript', 'vimdoc', 'vim', 'graphql', 'terraform', 'tmux' }
                 -- Enable treesitter highlighting & indentation for all filetypes with a parser
                 vim.api.nvim_create_autocmd('FileType', {
                     callback = function()
