@@ -1,4 +1,4 @@
--- agent-send.lua — find nearest codex/pi/claude tmux pane and send text to it
+-- agent-send.lua — send text to the nearest codex/pi/claude tmux pane or clipboard
 --
 -- Priority for finding the pane:
 --   1. Marked pane (if running codex/pi/claude)
@@ -102,6 +102,7 @@ end
 
 --- Find the best codex/pi/claude pane. Returns pane_id or nil.
 function M.find_pane()
+  if vim.fn.executable("tmux") == 0 then return nil end
   local session = tmux_var("#{session_name}")
   local cur_window = tmux_var("#{window_id}")
   local cur_pane = tmux_var("#{pane_id}")
@@ -175,7 +176,24 @@ local function get_buffer()
   return table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")
 end
 
--- Shared popup for adding context before sending
+--- Copy to both the system clipboard (+) and primary selection (*).
+local function copy_to_clipboard(text)
+  if vim.fn.has("clipboard") == 0 then
+    vim.notify("No clipboard provider available (see :help clipboard)", vim.log.levels.ERROR)
+    return
+  end
+
+  local ok, err = pcall(function()
+    vim.fn.setreg("+", text, "v")
+    vim.fn.setreg("*", text, "v")
+  end)
+  if not ok then
+    vim.notify("Failed to copy to clipboard: " .. tostring(err), vim.log.levels.ERROR)
+    return
+  end
+  vim.notify("Copied to clipboard", vim.log.levels.INFO)
+end
+
 --- Detect the agent name running in a pane.
 local function agent_name_for_pane(pane)
   local info = tmux("display-message", "-p", "-t", pane, "#{pane_current_command}\t#{pane_pid}")
@@ -184,13 +202,21 @@ local function agent_name_for_pane(pane)
   return detect_agent_name(cmd) or (pid and find_agent_in_process_tree(pid)) or "agent"
 end
 
+-- Shared popup for adding context before choosing how to send/copy.
 local function prompt_and_send(text)
   local pane = M.find_pane()
-  if not pane then
-    vim.notify("No Agent pane found", vim.log.levels.WARN)
-    return
+  local target = "no agent found"
+  if pane then
+    local name = agent_name_for_pane(pane)
+    local path = tmux("display-message", "-p", "-t", pane, "#{pane_current_path}") or ""
+    local folder = vim.fn.fnamemodify(path, ":t")
+    local session_name = name == "pi"
+        and tmux("display-message", "-p", "-t", pane, "#{@pi_session_name}")
+        or nil
+    target = name
+    if session_name and session_name ~= "" then target = target .. " · " .. session_name end
+    if folder ~= "" then target = target .. " · " .. folder end
   end
-  local name = agent_name_for_pane(pane)
   local buf = vim.api.nvim_create_buf(false, true)
   local width = math.floor(vim.o.columns * 0.6)
   local min_height = 1
@@ -203,7 +229,7 @@ local function prompt_and_send(text)
     height = min_height,
     style = "minimal",
     border = "rounded",
-    title = " Send to -> " .. name .. " ",
+    title = " Context -> " .. target .. " ",
     title_pos = "center",
   })
   vim.bo[buf].buftype = "nofile"
@@ -220,38 +246,45 @@ local function prompt_and_send(text)
     end,
   })
 
-  local function do_send(submit_flag)
-    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-    local ctx = table.concat(lines, "\n")
+  local function close()
+    vim.cmd("stopinsert")
     vim.api.nvim_win_close(win, true)
     vim.api.nvim_buf_delete(buf, { force = true })
-    vim.cmd("stopinsert")
-    if ctx ~= "" then
-      text = ctx .. "\n\n" .. text
-    end
-    M.send(text, submit_flag, pane)
   end
 
-  local function cancel()
-    vim.api.nvim_win_close(win, true)
-    vim.api.nvim_buf_delete(buf, { force = true })
-    vim.cmd("stopinsert")
+  local function choose_action()
+    local ctx = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
+    local payload = ctx ~= "" and (ctx .. "\n\n" .. text) or text
+    close()
+
+    -- Let insert mode finish before opening a selector (e.g. Telescope).
+    vim.schedule(function()
+      vim.ui.select({
+        "Send to Agent",
+        "Send to Agent and Execute",
+        "Copy to Clipboard",
+      }, { prompt = "Action -> " .. target }, function(choice)
+        if choice == "Send to Agent" then
+          M.send(payload, false, pane)
+        elseif choice == "Send to Agent and Execute" then
+          M.send(payload, true, pane)
+        elseif choice == "Copy to Clipboard" then
+          copy_to_clipboard(payload)
+        end
+      end)
+    end)
   end
 
-  -- Enter: send and submit
-  vim.keymap.set("i", "<CR>", function() do_send(false) end, { buffer = buf })
-  vim.keymap.set("n", "<CR>", function() do_send(false) end, { buffer = buf })
-  -- -- Ctrl+Enter / Ctrl+s: send without submitting (paste only)
-  -- vim.keymap.set("i", "<C-s>", function() do_send(false) end, { buffer = buf })
-  -- vim.keymap.set("n", "<C-s>", function() do_send(false) end, { buffer = buf })
-  vim.keymap.set("n", "<Esc>", cancel, { buffer = buf })
-  vim.keymap.set("n", "q", cancel, { buffer = buf })
+  -- Enter: choose paste only, paste + execute, or clipboard copy.
+  vim.keymap.set({ "i", "n" }, "<CR>", choose_action, { buffer = buf })
+  vim.keymap.set("n", "<Esc>", close, { buffer = buf })
+  vim.keymap.set("n", "q", close, { buffer = buf })
 end
 
 -- Keymaps
 vim.keymap.set("v", "<leader>ps", function() prompt_and_send(get_visual()) end,
-  { desc = "Send selection to agent with context" })
+  { desc = "Send/copy selection with context" })
 vim.keymap.set("n", "<leader>pb", function() prompt_and_send(get_buffer()) end,
-  { desc = "Send buffer to agent" })
+  { desc = "Send/copy buffer with context" })
 
 return M

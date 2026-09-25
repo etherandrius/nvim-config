@@ -492,6 +492,15 @@ local servers = {
         },
     },
     ts_ls = {},
+    yamlls = {
+        yaml = {
+            -- OmniAPI has no published schema; only the legacy OpenAPI specs are validated.
+            schemas = {
+                ["https://www.schemastore.org/openapi-3.X.json"] = "**/src/main/openapi/**/*.yml",
+            },
+            keyOrdering = false,
+        },
+    },
     -- graphql = {},
     -- gradle_ls = {},
     basedpyright = {},
