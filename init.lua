@@ -337,6 +337,10 @@ require("lazy").setup({
                                     granularity = { group = 'module' },
                                     prefix = 'self',
                                 },
+                                -- Neovim doesn't offer LSP file watching on Linux (it does on
+                                -- macOS/Windows), so there let rust-analyzer watch the workspace
+                                -- itself to pick up files changed outside the editor.
+                                files = vim.fn.has('linux') == 1 and { watcher = 'server' } or nil,
                             },
                         },
                     },
@@ -1010,6 +1014,7 @@ vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold" }, {
     command = "silent! checktime",
     desc = "Auto-reload files changed outside of Neovim",
 })
+require("external-changes")
 -- ]}}
 vim.cmd('source ~/.config/nvim/lua-migration/testBlock.vim')
 vim.cmd('source ~/.config/nvim/spell/abbrev.vim')
