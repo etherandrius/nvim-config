@@ -45,17 +45,20 @@ local function context_tags(cwd)
 end
 
 -- Contract: notes-meta/notes-tags.md and AGENTS.md in NOTES_DIR.
-local function template(title, timestamp, cwd, note_type)
+local function template(title, timestamp, cwd, meta)
   local lines = {
     "---",
     'createdTime: "' .. timestamp .. '"',
     'updatedTime: "' .. timestamp .. '"',
-    "type: " .. note_type,
+    "type: " .. meta.type,
     "upstreamLinks: []",
     "contextLinks: []",
     "downstreamLinks: []",
     "pwd: " .. yaml_string(cwd),
   }
+  if meta.deadline then
+    table.insert(lines, 5, "deadline: " .. yaml_string(meta.deadline))
+  end
   local tags = context_tags(cwd)
   if #tags == 0 then
     table.insert(lines, "tags: []")
@@ -73,7 +76,27 @@ local function slugify(title)
   return title:lower():gsub("%s+", "-"):gsub("[^%w%-]", "")
 end
 
-local function finish_create(title, notes_dir, region, note_type)
+-- Pulls `--hub`, `--leaf` and `--deadline=YYYY-MM-DD` out of the args;
+-- whatever is left is the title.
+local function parse_args(args)
+  local meta = {}
+  local words = {}
+  for word in args:gmatch("%S+") do
+    local deadline = word:match("^%-%-deadline=(.+)$")
+    if word == "--hub" then
+      meta.type = "hub"
+    elseif word == "--leaf" then
+      meta.type = "leaf"
+    elseif deadline then
+      meta.deadline = deadline
+    else
+      table.insert(words, word)
+    end
+  end
+  return table.concat(words, " "), meta
+end
+
+local function finish_create(title, notes_dir, region, meta)
   local current_file = vim.fn.expand("%:p")
   local current_dir = vim.fn.expand("%:p:h")
   local in_note = is_in_notes(current_file, notes_dir)
@@ -96,7 +119,7 @@ local function finish_create(title, notes_dir, region, note_type)
       vim.notify("Failed to create " .. filepath .. ": " .. err, vim.log.levels.ERROR)
       return
     end
-    local lines = template(title, timestamps.now(), vim.fn.getcwd(), note_type)
+    local lines = template(title, timestamps.now(), vim.fn.getcwd(), meta)
     local content = table.concat(lines, "\n") .. "\n"
     local written, write_err = vim.uv.fs_write(fd, content, 0)
     vim.uv.fs_close(fd)
@@ -112,6 +135,16 @@ local function finish_create(title, notes_dir, region, note_type)
         vim.api.nvim_buf_set_text(0, region[1], region[2], region[3], region[4], { link })
       else
         local row = vim.api.nvim_win_get_cursor(0)[1]
+        -- never insert inside the YAML front matter
+        local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+        if lines[1] == "---" then
+          for i = 2, #lines do
+            if lines[i] == "---" then
+              if row <= i then row = vim.api.nvim_buf_line_count(0) end
+              break
+            end
+          end
+        end
         vim.api.nvim_buf_set_lines(0, row, row, false, { link })
       end
       vim.cmd("silent write")
@@ -121,14 +154,17 @@ local function finish_create(title, notes_dir, region, note_type)
   end)
 end
 
-local function create_note(opts, note_type)
+local function create_note(opts, default_type)
   local notes_dir = get_notes_dir()
   if not notes_dir then
     vim.notify("NOTES_DIR not set", vim.log.levels.ERROR)
     return
   end
 
-  local title = opts.args ~= "" and opts.args or nil
+  local args, meta = parse_args(opts.args)
+  if opts.bang then meta.type = "hub" end
+  meta.type = meta.type or default_type
+  local title = args ~= "" and args or nil
   local region = nil
 
   if not title and opts.range == 2 then
@@ -147,18 +183,18 @@ local function create_note(opts, note_type)
   end
 
   if title then
-    finish_create(title, notes_dir, region, note_type)
+    finish_create(title, notes_dir, region, meta)
   else
     vim.ui.input({ prompt = "Title: " }, function(t)
       if not t or t == "" then return end
-      finish_create(t, notes_dir, nil, note_type)
+      finish_create(t, notes_dir, nil, meta)
     end)
   end
 end
 
 vim.api.nvim_create_user_command("CreateNote", function(opts)
   create_note(opts, "leaf")
-end, { nargs = "*", range = true, desc = "Create a leaf note" })
+end, { nargs = "*", range = true, bang = true, desc = "Create a leaf note (! or --hub for a hub)" })
 vim.api.nvim_create_user_command("CreateHub", function(opts)
   create_note(opts, "hub")
 end, { nargs = "*", range = true, desc = "Create a small navigation hub" })
