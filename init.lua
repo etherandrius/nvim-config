@@ -751,7 +751,12 @@ require('telescope').setup {
     extensions = {
         ["ui-select"] = {
             require("telescope.themes").get_dropdown {
-                -- even more opts
+                attach_mappings = function(_, map)
+                    local actions = require("telescope.actions")
+                    map({ "i", "n" }, "<C-j>", actions.move_selection_next)
+                    map({ "i", "n" }, "<C-k>", actions.move_selection_previous)
+                    return true
+                end,
             }
 
             -- pseudo code / specification for writing custom displays, like the one

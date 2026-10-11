@@ -6,7 +6,9 @@
 --   3. Agent pane with the same cwd
 --   4. No match → nil
 --
--- Always within the same tmux session. Never targets the calling pane.
+-- Unmarked panes are searched only within the same tmux session.
+-- A marked pane may be in another session; the popup title labels that session.
+-- Never targets the calling pane. Outside tmux, use the clipboard option.
 
 local M = {}
 
@@ -97,11 +99,17 @@ end
 
 --- Get a tmux format variable for the current pane.
 local function tmux_var(fmt)
+  -- Anchor queries to Neovim's pane, not whichever tmux client is active.
+  if vim.env.TMUX_PANE then
+    return tmux("display-message", "-p", "-t", vim.env.TMUX_PANE, fmt)
+  end
   return tmux("display-message", "-p", fmt)
 end
 
 --- Find the best codex/pi/claude pane. Returns pane_id or nil.
 function M.find_pane()
+  -- Outside tmux there is no reliable calling session; copying still works.
+  if not vim.env.TMUX or not vim.env.TMUX_PANE then return nil end
   if vim.fn.executable("tmux") == 0 then return nil end
   local session = tmux_var("#{session_name}")
   local cur_window = tmux_var("#{window_id}")
@@ -168,12 +176,12 @@ local function get_visual()
   -- Visual mode stops, so reading earlier returns the previous selection.
   local start_line = vim.fn.line("'<")
   local text = vim.fn.getreg("z")
-  return path .. ":" .. start_line .. "\n```" .. ext .. "\n" .. text .. "\n```"
+  return path .. ":" .. start_line .. "\n```" .. ext .. "\n" .. text .. "\n```", "markdown"
 end
 
---- Get entire buffer text.
+--- Get entire buffer text and its preview filetype.
 local function get_buffer()
-  return table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")
+  return table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n"), vim.bo.filetype
 end
 
 --- Copy to both the system clipboard (+) and primary selection (*).
@@ -202,8 +210,30 @@ local function agent_name_for_pane(pane)
   return detect_agent_name(cmd) or (pid and find_agent_in_process_tree(pid)) or "agent"
 end
 
--- Shared popup for adding context before choosing how to send/copy.
-local function prompt_and_send(text)
+--- Label targets outside Neovim's tmux window; session differences take priority.
+local function pane_location_label(pane)
+  if not pane or not vim.env.TMUX or not vim.env.TMUX_PANE then return nil end
+  local fmt = "#{session_id}\t#{window_id}\t#{window_index}"
+  local source = tmux_var(fmt)
+  local target = tmux("display-message", "-p", "-t", pane, fmt)
+  local source_session, source_window = (source or ""):match("^([^\t]+)\t([^\t]+)\t%d+$")
+  local target_session, target_window, target_index = (target or ""):match("^([^\t]+)\t([^\t]+)\t(%d+)$")
+  if not source_session or not target_session then return nil end
+
+  if source_session ~= target_session then
+    -- Keep the normal title colors, adding only an underline to the label.
+    vim.api.nvim_set_hl(0, "AgentSendSessionWarning", { underline = true, default = true })
+    return "!s:" .. target_session:gsub("^%$", ""), { "FloatTitle", "AgentSendSessionWarning" }
+  elseif source_window ~= target_window then
+    -- Compare stable IDs, but display the number used in tmux's status bar.
+    return "w:" .. target_index, "FloatTitle"
+  end
+end
+
+-- Shared popup for adding context while previewing the text being sent/copied.
+local function prompt_and_send(text, filetype)
+  local reference_name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":~:.")
+  if reference_name == "" then reference_name = "[No Name]" end
   local pane = M.find_pane()
   local target = "no agent found"
   if pane then
@@ -217,40 +247,103 @@ local function prompt_and_send(text)
     if session_name and session_name ~= "" then target = target .. " · " .. session_name end
     if folder ~= "" then target = target .. " · " .. folder end
   end
+  local title = { { " " .. target .. " ", "FloatTitle" } }
+  local location, location_hl = pane_location_label(pane)
+  if location then
+    title = { { " " .. target .. " · ", "FloatTitle" }, { location, location_hl }, { " ", "FloatTitle" } }
+    target = target .. " · " .. location
+  end
+  local preview_buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(preview_buf, 0, -1, false, vim.split(text, "\n", { plain = true }))
+  vim.bo[preview_buf].filetype = filetype
+  vim.bo[preview_buf].modifiable = false
+  vim.bo[preview_buf].readonly = true
   local buf = vim.api.nvim_create_buf(false, true)
-  local width = math.floor(vim.o.columns * 0.6)
-  local min_height = 1
-  local max_height = math.floor(vim.o.lines * 0.4)
-  local win = vim.api.nvim_open_win(buf, true, {
+
+  local function dimensions()
+    -- Reserve both borders and space for the message, even on a short screen.
+    local available = math.max(6, vim.o.lines - vim.o.cmdheight - 2)
+    local width = math.max(1, math.min(math.floor(vim.o.columns * 0.6), vim.o.columns - 2))
+    local preview_height = math.min(vim.api.nvim_buf_line_count(preview_buf),
+      math.max(1, math.floor((available - 4) * 0.6)))
+    local max_height = math.max(1, math.min(math.floor(available * 0.25), available - preview_height - 4))
+    local row = math.max(0, math.floor((available - preview_height - max_height - 4) / 2))
+    local col = math.max(0, math.floor((vim.o.columns - width - 2) / 2))
+    return width, preview_height, max_height, row, col
+  end
+
+  local width, preview_height, _, row, col = dimensions()
+  local preview_win = vim.api.nvim_open_win(preview_buf, false, {
     relative = "editor",
-    row = math.floor(vim.o.lines * 0.3),
-    col = math.floor((vim.o.columns - width) / 2),
+    row = row,
+    col = col,
     width = width,
-    height = min_height,
+    height = preview_height,
     style = "minimal",
     border = "rounded",
-    title = " Context -> " .. target .. " ",
+    title = " Reference · " .. reference_name .. " ",
+    title_pos = "center",
+    footer = " <C-u>/<C-d> scroll reference ",
+    footer_pos = "center",
+  })
+  vim.wo[preview_win].wrap = false
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative = "editor",
+    row = row + preview_height + 2,
+    col = col,
+    width = width,
+    height = 1,
+    style = "minimal",
+    border = "rounded",
+    title = title,
     title_pos = "center",
   })
-  vim.bo[buf].buftype = "nofile"
-  vim.cmd("startinsert")
-
-  -- Auto-resize as text grows
-  vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
-    buffer = buf,
-    callback = function()
-      if not vim.api.nvim_win_is_valid(win) then return end
-      local line_count = vim.api.nvim_buf_line_count(buf)
-      local new_height = math.max(min_height, math.min(line_count, max_height))
-      vim.api.nvim_win_set_height(win, new_height)
-    end,
-  })
+  vim.wo[win].wrap = true
+  local group = vim.api.nvim_create_augroup("AgentSend" .. buf, { clear = true })
+  local closed = false
 
   local function close()
+    if closed then return end
+    closed = true
+    vim.api.nvim_del_augroup_by_id(group)
     vim.cmd("stopinsert")
-    vim.api.nvim_win_close(win, true)
-    vim.api.nvim_buf_delete(buf, { force = true })
+    for _, popup in ipairs({ win, preview_win }) do
+      if vim.api.nvim_win_is_valid(popup) then vim.api.nvim_win_close(popup, true) end
+    end
+    for _, scratch in ipairs({ buf, preview_buf }) do
+      if vim.api.nvim_buf_is_valid(scratch) then vim.api.nvim_buf_delete(scratch, { force = true }) end
+    end
   end
+
+  -- Keep the reference above the message as it grows or the terminal resizes.
+  local function resize()
+    if closed or not vim.api.nvim_win_is_valid(win) or not vim.api.nvim_win_is_valid(preview_win) then return end
+    local w, ph, max_height, r, c = dimensions()
+    vim.api.nvim_win_set_config(preview_win, { relative = "editor", row = r, col = c, width = w, height = ph })
+    vim.api.nvim_win_set_config(win, { relative = "editor", row = r + ph + 2, col = c, width = w })
+    local height = vim.api.nvim_win_text_height(win, {}).all
+    vim.api.nvim_win_set_height(win, math.max(1, math.min(height, max_height)))
+  end
+  vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
+    group = group,
+    buffer = buf,
+    callback = resize,
+  })
+  vim.api.nvim_create_autocmd("VimResized", { group = group, callback = resize })
+  vim.api.nvim_create_autocmd("WinClosed", {
+    group = group,
+    pattern = { tostring(win), tostring(preview_win) },
+    callback = function() vim.schedule(close) end,
+  })
+
+  -- Scroll without leaving insert mode or changing the message/cursor.
+  for key, command in pairs({ ["<C-d>"] = "\004", ["<C-u>"] = "\021" }) do
+    vim.keymap.set({ "i", "n" }, key, function()
+      if not vim.api.nvim_win_is_valid(preview_win) then return end
+      vim.api.nvim_win_call(preview_win, function() vim.cmd.normal({ command, bang = true }) end)
+    end, { buffer = buf, desc = "Scroll referenced code" })
+  end
+  vim.cmd("startinsert")
 
   local function choose_action()
     local ctx = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
@@ -277,8 +370,12 @@ local function prompt_and_send(text)
 
   -- Enter: choose paste only, paste + execute, or clipboard copy.
   vim.keymap.set({ "i", "n" }, "<CR>", choose_action, { buffer = buf })
-  vim.keymap.set("n", "<Esc>", close, { buffer = buf })
-  vim.keymap.set("n", "q", close, { buffer = buf })
+  for _, scratch in ipairs({ buf, preview_buf }) do
+    vim.keymap.set({ "i", "n" }, "<C-j>", "<Down>", { buffer = scratch, desc = "Move down" })
+    vim.keymap.set({ "i", "n" }, "<C-k>", "<Up>", { buffer = scratch, desc = "Move up" })
+    vim.keymap.set("n", "<Esc>", close, { buffer = scratch })
+    vim.keymap.set("n", "q", close, { buffer = scratch })
+  end
 end
 
 -- Keymaps

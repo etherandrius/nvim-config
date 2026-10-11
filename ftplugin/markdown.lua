@@ -9,6 +9,14 @@ vim.opt_local.spell = true
 vim.opt_local.colorcolumn = {}
 vim.opt_local.textwidth = 0
 
+-- gr remains the heading/link under the cursor; gR queries the whole note.
+vim.keymap.set('n', 'gR', function()
+    require('notes-references').show()
+end, { buffer = true, desc = 'References to current note (Marksman)' })
+vim.api.nvim_buf_create_user_command(0, 'NoteReferences', function()
+    require('notes-references').show()
+end, { desc = 'Find whole-note backlinks with Marksman' })
+
 -- Folding by heading level via treesitter
 -- vim.opt_local.foldmethod = "expr"
 -- vim.opt_local.foldexpr = "v:lua.vim.treesitter.foldexpr()"

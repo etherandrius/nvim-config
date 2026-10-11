@@ -1,3 +1,6 @@
+local timestamps = require("notes-timestamps")
+timestamps.setup()
+
 local function get_notes_dir()
   local value = os.getenv("NOTES_DIR")
   if not value then return nil end
@@ -6,14 +9,71 @@ local function get_notes_dir()
 end
 
 local function is_in_notes(filepath, notes_dir)
-  return filepath:match("%.md$") and string.find(filepath, notes_dir, 1, true)
+  return timestamps.is_note(filepath, notes_dir)
+end
+
+local function yaml_string(value)
+  return '"' .. value:gsub("\\", "\\\\"):gsub('"', '\\"') .. '"'
+end
+
+local function yaml_item(value)
+  return value:match("^[%w._/-]+$") and value or yaml_string(value)
+end
+
+-- Working-context tags from Neovim's cwd (not the note's destination), per AGENTS.md:
+-- repo/<name> always inside Git; worktree/<dir> only in a linked worktree.
+local function context_tags(cwd)
+  local out = vim.system({
+    "git", "-C", cwd, "rev-parse", "--path-format=absolute",
+    "--show-toplevel", "--git-dir", "--git-common-dir",
+  }, { text = true }):wait()
+  if out.code ~= 0 then return {} end
+  local toplevel, git_dir, common_dir = unpack(vim.split(vim.trim(out.stdout), "\n"))
+  if not (toplevel and git_dir and common_dir) then return {} end
+  common_dir = vim.fs.normalize(common_dir)
+  local repo = vim.fs.basename(common_dir)
+  if repo == ".git" then
+    repo = vim.fs.basename(vim.fs.dirname(common_dir))
+  else
+    repo = repo:gsub("%.git$", "")
+  end
+  local tags = { "repo/" .. repo }
+  if vim.fs.normalize(git_dir) ~= common_dir then
+    table.insert(tags, "worktree/" .. vim.fs.basename(toplevel))
+  end
+  return tags
+end
+
+-- Contract: notes-meta/notes-tags.md and AGENTS.md in NOTES_DIR.
+local function template(title, timestamp, cwd, note_type)
+  local lines = {
+    "---",
+    'createdTime: "' .. timestamp .. '"',
+    'updatedTime: "' .. timestamp .. '"',
+    "type: " .. note_type,
+    "upstreamLinks: []",
+    "contextLinks: []",
+    "downstreamLinks: []",
+    "pwd: " .. yaml_string(cwd),
+  }
+  local tags = context_tags(cwd)
+  if #tags == 0 then
+    table.insert(lines, "tags: []")
+  else
+    table.insert(lines, "tags:")
+    for _, tag in ipairs(tags) do
+      table.insert(lines, "  - " .. yaml_item(tag))
+    end
+  end
+  vim.list_extend(lines, { "---", "# " .. title, "" })
+  return lines
 end
 
 local function slugify(title)
   return title:lower():gsub("%s+", "-"):gsub("[^%w%-]", "")
 end
 
-local function finish_create(title, notes_dir, region)
+local function finish_create(title, notes_dir, region, note_type)
   local current_file = vim.fn.expand("%:p")
   local current_dir = vim.fn.expand("%:p:h")
   local in_note = is_in_notes(current_file, notes_dir)
@@ -30,19 +90,20 @@ local function finish_create(title, notes_dir, region)
 
     vim.fn.mkdir(vim.fn.fnamemodify(filepath, ":h"), "p")
 
-    local f = io.open(filepath, "w")
-    if not f then
-      vim.notify("Failed to create " .. filepath, vim.log.levels.ERROR)
+    -- Exclusive creation: an existing note (and its timestamps) must never be truncated.
+    local fd, err = vim.uv.fs_open(filepath, "wx", 420)
+    if not fd then
+      vim.notify("Failed to create " .. filepath .. ": " .. err, vim.log.levels.ERROR)
       return
     end
-    f:write("# " .. title .. "\n")
-    f:write("\n")
-    f:write("Tags: [[todo]]\n")
-    f:write("type: \n")
-    f:write("\n")
-    f:write("---\n")
-    f:write("\n")
-    f:close()
+    local lines = template(title, timestamps.now(), vim.fn.getcwd(), note_type)
+    local content = table.concat(lines, "\n") .. "\n"
+    local written, write_err = vim.uv.fs_write(fd, content, 0)
+    vim.uv.fs_close(fd)
+    if written ~= #content then
+      vim.notify("Failed to write " .. filepath .. ": " .. (write_err or "short write"), vim.log.levels.ERROR)
+      return
+    end
 
     if in_note then
       local link_name = vim.fn.fnamemodify(filepath, ":t:r")
@@ -60,7 +121,7 @@ local function finish_create(title, notes_dir, region)
   end)
 end
 
-local function create_note(opts)
+local function create_note(opts, note_type)
   local notes_dir = get_notes_dir()
   if not notes_dir then
     vim.notify("NOTES_DIR not set", vim.log.levels.ERROR)
@@ -86,13 +147,18 @@ local function create_note(opts)
   end
 
   if title then
-    finish_create(title, notes_dir, region)
+    finish_create(title, notes_dir, region, note_type)
   else
     vim.ui.input({ prompt = "Title: " }, function(t)
       if not t or t == "" then return end
-      finish_create(t, notes_dir)
+      finish_create(t, notes_dir, nil, note_type)
     end)
   end
 end
 
-vim.api.nvim_create_user_command("CreateNote", create_note, { nargs = "*", range = true })
+vim.api.nvim_create_user_command("CreateNote", function(opts)
+  create_note(opts, "leaf")
+end, { nargs = "*", range = true, desc = "Create a leaf note" })
+vim.api.nvim_create_user_command("CreateHub", function(opts)
+  create_note(opts, "hub")
+end, { nargs = "*", range = true, desc = "Create a small navigation hub" })
