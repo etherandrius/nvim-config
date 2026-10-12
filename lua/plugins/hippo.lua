@@ -5,7 +5,8 @@ end
 
 return {
     dir = hippo_path,
-    build = "hippo-nvim/build.sh",
+    -- The plugin is pure Lua; it runs the `hippo` CLI, which this installs.
+    build = "cargo install --path hippo-cli --locked",
     config = function()
         vim.opt.runtimepath:append(hippo_path .. "/hippo-nvim")
         require("hippo").setup({
