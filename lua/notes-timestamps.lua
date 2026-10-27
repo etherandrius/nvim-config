@@ -5,7 +5,7 @@ function M.now()
 end
 
 -- Only touch top-level timestamp fields; never guess a legacy note's creation time.
-function M.update(lines, timestamp, is_new)
+function M.update(lines, timestamp, is_new, default_type)
   local result = vim.deepcopy(lines)
   local closing
   if result[1] == "---" then
@@ -47,10 +47,10 @@ function M.update(lines, timestamp, is_new)
     table.insert(result, updated, 'createdTime: "' .. timestamp .. '"')
     updated = updated + 1
   end
-  -- A genuinely new manual note defaults to leaf. Never infer the role of a
-  -- legacy note or overwrite an explicit hub; :CreateHub supplies type: hub.
+  -- Only genuinely new notes get a destination-aware default. Never infer a
+  -- legacy role or overwrite any explicit type, including hub/agent-session.
   if is_new and not note_type then
-    table.insert(result, updated + 1, "type: leaf")
+    table.insert(result, updated + 1, "type: " .. (default_type or "leaf"))
   end
   return result
 end
@@ -65,6 +65,15 @@ function M.is_note(filepath, notes_dir)
     and name ~= "AGENTS.md" and name ~= "CLAUDE.md" and name ~= "todo.md"
 end
 
+-- Storage determines only the default for new conversation records; it is not
+-- source pwd/tags or agentSession identity. Existing notes are never classified.
+function M.default_type(filepath, notes_dir)
+  if not M.is_note(filepath, notes_dir) then return "leaf" end
+  local root = vim.fs.normalize(vim.fn.resolve(vim.fn.fnamemodify(vim.fn.expand(notes_dir), ":p"))):gsub("/$", "")
+  local path = vim.fs.normalize(vim.fn.resolve(vim.fn.fnamemodify(filepath, ":p")))
+  return path:sub(1, #root + 10) == root .. "/sessions/" and "agent-session" or "leaf"
+end
+
 function M.setup()
   local group = vim.api.nvim_create_augroup("NotesTimestamps", { clear = true })
   vim.api.nvim_create_autocmd("BufWritePre", {
@@ -76,7 +85,7 @@ function M.setup()
       local is_new = vim.uv.fs_stat(path) == nil
       if not is_new and not vim.bo[event.buf].modified then return end
       local lines = vim.api.nvim_buf_get_lines(event.buf, 0, -1, false)
-      local updated, err = M.update(lines, M.now(), is_new)
+      local updated, err = M.update(lines, M.now(), is_new, M.default_type(path, os.getenv("NOTES_DIR")))
       if not updated then
         -- Refuse the save rather than silently writing a note without valid timestamps.
         error("Note timestamps: " .. err)

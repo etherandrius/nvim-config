@@ -10,10 +10,84 @@ end
 
 -- Never touch the real tmux session, agent, or clipboard.
 agent.find_pane = function() return nil end
+agent.list_agents = function()
+  return {
+    {
+      id = "%2",
+      name = "claude",
+      place = "window",
+      session_id = "$1",
+      window_index = "1",
+      window_name = "nvim",
+      pane_index = "1",
+      dir = "/tmp/nvim",
+    },
+  }
+end
 local sent, selected, choice
 agent.send = function(text, submit, pane)
   sent = { text = text, submit = submit, pane = pane }
 end
+
+local ordered = agent.order_agents({
+  { id = "%self", name = "pi", session_id = "$1", window_id = "@1", window_index = "1", window_name = "nvim", pane_index = "1", dir = "/work/nvim" },
+  { id = "%mark", name = "pi", session_id = "$2", tmux_session = "ops", window_id = "@9", window_index = "4", window_name = "marked-repo", pane_index = "1", dir = "/work/marked-repo", pi_session_name = "marked-agent" },
+  { id = "%winb", name = "claude", session_id = "$1", window_id = "@1", window_index = "1", window_name = "nvim", pane_index = "3", dir = "/work/nvim" },
+  { id = "%wina", name = "codex", session_id = "$1", window_id = "@1", window_index = "1", window_name = "nvim", pane_index = "2", dir = "/work/else" },
+  { id = "%cwd", name = "pi", session_id = "$1", window_id = "@2", window_index = "5", window_name = "same", pane_index = "1", dir = "/work/nvim", pi_session_name = "same-cwd" },
+  { id = "%sess", name = "pi", session_id = "$1", window_id = "@3", window_index = "2", window_name = "notes", pane_index = "1", dir = "/work/notes", pi_session_name = "notes" },
+  { id = "%far", name = "claude", session_id = "$8", tmux_session = "far", window_id = "@8", window_index = "1", window_name = "farwin", pane_index = "2", dir = "/work/far" },
+  { id = "%farcwd", name = "pi", session_id = "$8", tmux_session = "far", window_id = "@7", window_index = "1", window_name = "nvim", pane_index = "1", dir = "/work/nvim", pi_session_name = "far-cwd" },
+  { id = "%later", name = "codex", session_id = "$10", tmux_session = "later", window_id = "@10", window_index = "1", window_name = "later", pane_index = "1", dir = "/work/later" },
+}, {
+  session_id = "$1", window_id = "@1", pane_id = "%self", dir = "/work/nvim",
+}, "%mark")
+local ids = {}
+for _, pane in ipairs(ordered) do ids[#ids + 1] = pane.id end
+check(vim.deep_equal(ids, { "%wina", "%winb", "%mark", "%cwd", "%sess", "%farcwd", "%far", "%later" }),
+  "picker order is this window, marked, same cwd, this session, then other sessions")
+check(ordered[3].place == "marked" and ordered[3].foreign_session, "marked pane stays behind this window")
+local marked_here = agent.order_agents({
+  { id = "%m", name = "pi", session_id = "$1", tmux_session = "main", window_id = "@1", window_index = "1", window_name = "nvim", pane_index = "2", pi_session_name = "here" },
+  { id = "%o", name = "claude", session_id = "$1", window_id = "@1", window_index = "1", pane_index = "1" },
+}, { session_id = "$1", window_id = "@1", pane_id = "%self" }, "%m")
+check(marked_here[1].id == "%o" and marked_here[1].place == "window" and marked_here[2].place == "window",
+  "a marked pane in this window stays with this window")
+local here_labels = {}
+for _, item in ipairs(agent.action_items(marked_here)) do here_labels[#here_labels + 1] = item.label end
+check(here_labels[3] == "here · Send *M P:2", "marked in this window omits S and W")
+local marked_session = agent.order_agents({
+  { id = "%s", name = "pi", session_id = "$1", tmux_session = "main", window_id = "@2", window_index = "5", window_name = "same", pane_index = "1", pi_session_name = "elsewhere" },
+}, { session_id = "$1", window_id = "@1", pane_id = "%self", dir = "/other" }, "%s")
+check(agent.action_items(marked_session)[1].label == "elsewhere · Send [*M W:5:same]",
+  "marked in this session omits S")
+local labels = {}
+for _, item in ipairs(agent.action_items(ordered)) do labels[#labels + 1] = item.label end
+check(labels[1] == "{noname} · Send P:2", "this window comes before the marked pane")
+check(labels[5] == "marked-agent · Send [*M S:ops W:4:marked-repo]", "marked target uses the session name and window id")
+check(labels[6] == "marked-agent · Send and Execute [*M S:ops W:4:marked-repo]", "marked execute follows send")
+check(labels[3] == "{noname} · Send P:3", "multiple agents in this window keep an unbracketed pane index")
+check(labels[7] == "same-cwd · Send [W:5:same]", "this session omits S and a lone pane omits P")
+check(labels[11] == "Copy to Clipboard", "clipboard follows this session and precedes other sessions")
+check(labels[12] == "far-cwd · Send [S:far W:1:nvim]", "other sessions use the session name")
+check(labels[#labels] == "{noname} · Send and Execute [S:later W:1:later]", "later session stays last")
+check(agent.action_items({})[1].label == "Copy to Clipboard" and #agent.action_items({}) == 1,
+  "no agents still offers clipboard")
+local snapshot = agent.parse_process_snapshot(
+  "10 1 zsh\n11 10 pi\n12 11 node\n",
+  "10 -zsh\n11 pi\n12 node /usr/local/bin/claude\n")
+check(agent.agent_in_snapshot("10", snapshot) == "pi", "snapshot finds a child agent without per-process ps")
+check(agent.agent_in_snapshot("12", snapshot) == "claude", "snapshot reads an agent path from the command line")
+check(agent.detect_agent_name("node /Volumes/git/pi-orchestrator/dist/pi-orchestrator") == nil,
+  "pi-orchestrator CLI is not a pi agent")
+check(agent.detect_agent_name("node /Volumes/git/pi-orchestrator/dist/coding-host-main.js --session /Users/x/.local/state/pi/sessions/a.jsonl") == nil,
+  "pi session path does not make pi-orchestrator a pi agent")
+check(agent.detect_agent_name("node /opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js") == "pi",
+  "pi-coding-agent wrapper is still pi")
+check(agent.detect_agent_name("/opt/homebrew/bin/pi --foo") == "pi", "pi executable path is still pi")
+check(agent.agent_in_snapshot("99", snapshot) == nil, "unknown pid is not an agent")
+local cycle = agent.parse_process_snapshot("1 2 zsh\n2 1 zsh\n", "1 zsh\n2 zsh\n")
+check(agent.agent_in_snapshot("1", cycle) == nil, "process cycles do not hang")
 vim.ui.select = function(items, opts, callback)
   selected = { items = items, prompt = opts.prompt }
   callback(choice)
@@ -67,6 +141,19 @@ local function check_geometry(popup)
 end
 
 local popup = open("\\pb")
+local function title_text(title)
+  if type(title) == "string" then return title end
+  if type(title) ~= "table" then return "" end
+  local parts = {}
+  for _, chunk in ipairs(title) do
+    parts[#parts + 1] = type(chunk) == "table" and chunk[1] or tostring(chunk)
+  end
+  return table.concat(parts)
+end
+local message_title = title_text(vim.api.nvim_win_get_config(popup.win).title)
+check(message_title == " Context ", "message title does not name a single target")
+check(not message_title:find("!s:", 1, true) and not message_title:find("w:", 1, true),
+  "message title has no session or window warning")
 check(vim.deep_equal(vim.api.nvim_buf_get_lines(popup.preview, 0, -1, false), lines), "full buffer preview is exact")
 check(vim.bo[popup.preview].filetype == "lua", "buffer preview retains syntax filetype")
 check(not vim.bo[popup.preview].modifiable and vim.bo[popup.preview].readonly, "preview is read-only")
@@ -92,22 +179,32 @@ check(vim.api.nvim_buf_get_lines(popup.input, 0, -1, false)[1] == "Inspect this 
   "typing continues in the message across reference scrolling")
 
 vim.api.nvim_buf_set_lines(popup.input, 0, -1, false, { "first line", "second line" })
-for _, case in ipairs({ { popup.win, "n" }, { popup.win, "i" }, { popup.preview_win, "n" } }) do
-  local win, mode = case[1], case[2]
+for _, case in ipairs({
+  { popup.win, "n", { "<C-j>", "<C-k>" } },
+  { popup.win, "i", { "<C-k>" } },
+  { popup.preview_win, "n", { "<C-j>", "<C-k>" } },
+}) do
+  local win, mode, keys = case[1], case[2], case[3]
   vim.api.nvim_set_current_win(win)
   vim.api.nvim_win_set_cursor(win, { 1, 0 })
-  for _, move in ipairs({ { "<C-j>", "<Down>", 2 }, { "<C-k>", "<Up>", 1 } }) do
-    local map = vim.fn.maparg(move[1], mode, false, true)
-    check(map.buffer == 1 and map.rhs == move[2], move[1] .. " is a buffer-local arrow mapping")
-    local sequence = mode == "i" and ("i" .. move[1] .. "<Esc>") or move[1]
+  for _, lhs in ipairs(keys) do
+    local rhs = lhs == "<C-j>" and "<Down>" or "<Up>"
+    local line = lhs == "<C-j>" and 2 or 1
+    local map = vim.fn.maparg(lhs, mode, false, true)
+    check(map.buffer == 1 and map.rhs == rhs, lhs .. " is a buffer-local arrow mapping in " .. mode)
+    local sequence = mode == "i" and ("i" .. lhs .. "<Esc>") or lhs
     vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(sequence, true, false, true), "xt", false)
-    check(vim.api.nvim_win_get_cursor(win)[1] == move[3], move[1] .. " moves vertically in " .. mode .. " mode")
+    check(vim.api.nvim_win_get_cursor(win)[1] == line, lhs .. " moves vertically in " .. mode .. " mode")
   end
 end
 vim.api.nvim_set_current_win(popup.win)
-check(vim.deep_equal(vim.api.nvim_buf_get_lines(popup.input, 0, -1, false), { "first line", "second line" }),
-  "arrow shortcuts do not insert newlines or change the message")
-check(selected == nil and sent == nil, "arrow shortcuts do not submit")
+vim.cmd("stopinsert")
+check(vim.fn.maparg("<C-j>", "i", false, true).rhs ~= "<Down>", "insert ctrl-j is not stolen for movement")
+vim.api.nvim_buf_set_lines(popup.input, 0, -1, false, { "hello" })
+vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("A<C-j><Esc>", true, false, true), "xt", false)
+check(vim.deep_equal(vim.api.nvim_buf_get_lines(popup.input, 0, -1, false), { "hello", "" }),
+  "insert ctrl-j starts a new line")
+check(selected == nil and sent == nil, "newline and arrow shortcuts do not submit")
 
 vim.api.nvim_buf_set_lines(popup.input, 0, -1, false, { string.rep("message ", 40) })
 vim.api.nvim_exec_autocmds("TextChangedI", { buffer = popup.input })
@@ -123,13 +220,39 @@ vim.api.nvim_exec_autocmds("VimResized", {})
 check_geometry(popup)
 
 vim.api.nvim_buf_set_lines(popup.input, 0, -1, false, { "Explain this", "and suggest improvements" })
-choice = "Send to Agent"
+choice = { action = "send", submit = false, pane = "%2" }
 mapping("<CR>", "i")()
 check_closed(popup)
 check(vim.wait(500, function() return sent ~= nil end, 10), "action runs after popup closes")
 check(sent.text == "Explain this\nand suggest improvements\n\n" .. table.concat(lines, "\n"), "message and reference sent exactly once")
-check(sent.submit == false, "send does not execute")
-check(#selected.items == 3, "send, execute and clipboard choices retained")
+check(sent.submit == false and sent.pane == "%2", "send does not execute and targets the chosen pane")
+check(selected.prompt == "Send", "picker prompt does not warn about location")
+check(vim.deep_equal(vim.tbl_map(function(item) return item.label end, selected.items), {
+  "{noname} · Send",
+  "{noname} · Send and Execute",
+  "Copy to Clipboard",
+}), "picker offers send, execute, and clipboard for the listed agent")
+
+-- A second Enter is often still queued when the picker opens. It must not cancel the send.
+popup = open("\\pb")
+vim.api.nvim_buf_set_lines(popup.input, 0, -1, false, { "do not lose this" })
+local real_getchar = vim.fn.getchar
+vim.fn.getchar = function(expr)
+  if expr == 1 then return 13 end
+  if expr == 0 then
+    vim.fn.getchar = real_getchar
+    return 13
+  end
+  return real_getchar(expr)
+end
+sent, selected = nil, nil
+choice = nil
+mapping("<CR>", "i")()
+check(vim.wait(500, function() return sent ~= nil end, 10), "queued enter still sends")
+check(selected == nil, "queued enter does not open a picker that can discard the prompt")
+check(sent.text:find("do not lose this", 1, true) and sent.pane == "%2" and sent.submit == false,
+  "queued enter sends the prompt to the default agent")
+vim.fn.getchar = real_getchar
 
 -- Selection preview includes the exact file/line and fenced code being sent.
 vim.api.nvim_buf_set_mark(source, "<", 1, 0, {})
@@ -140,11 +263,12 @@ local expected = vim.api.nvim_buf_get_name(source) .. ":2\n```lua\n" .. lines[2]
 check(table.concat(vim.api.nvim_buf_get_lines(popup.preview, 0, -1, false), "\n") == expected,
   "selection preview has fresh line marks, code fences and only selected code")
 check(vim.bo[popup.preview].filetype == "markdown", "fenced selection uses Markdown syntax")
-choice = "Send to Agent and Execute"
+choice = { action = "send", submit = true, pane = "%2" }
 mapping("<CR>")()
 check_closed(popup)
 check(vim.wait(500, function() return sent ~= nil end, 10), "selection action completes")
-check(sent.text == expected and sent.submit == true, "empty message sends selection unchanged and executes")
+check(sent.text == expected and sent.submit == true and sent.pane == "%2",
+  "empty message sends selection unchanged and executes in the chosen pane")
 
 for _, key in ipairs({ "q", "<Esc>" }) do
   popup = open("\\pb")

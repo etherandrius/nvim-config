@@ -119,6 +119,9 @@ local function finish_create(title, notes_dir, region, meta)
       vim.notify("Failed to create " .. filepath .. ": " .. err, vim.log.levels.ERROR)
       return
     end
+    if meta.destination_default then
+      meta.type = timestamps.default_type(filepath, notes_dir)
+    end
     local lines = template(title, timestamps.now(), vim.fn.getcwd(), meta)
     local content = table.concat(lines, "\n") .. "\n"
     local written, write_err = vim.uv.fs_write(fd, content, 0)
@@ -163,6 +166,7 @@ local function create_note(opts, default_type)
 
   local args, meta = parse_args(opts.args)
   if opts.bang then meta.type = "hub" end
+  meta.destination_default = not meta.type and default_type == "leaf"
   meta.type = meta.type or default_type
   local title = args ~= "" and args or nil
   local region = nil
