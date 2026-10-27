@@ -8,3 +8,4 @@ view/*
 keylogger/*
 plugin/packer_compiled.lua
 lazy-lock.json
+/local.lua

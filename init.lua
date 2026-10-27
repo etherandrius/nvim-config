@@ -496,6 +496,7 @@ local servers = {
         },
     },
     ts_ls = {},
+    eslint = {},
     yamlls = {
         yaml = {
             -- OmniAPI has no published schema; only the legacy OpenAPI specs are validated.
@@ -890,28 +891,6 @@ vim.keymap.set('n', '<leader>Rg', function()
 end
 , { desc = '[S]earch all files using [G]rep' })
 
-vim.keymap.set('n', '<leader>rdg', function()
-    -- local visual_selection = string.sub(vim.fn.getline("'<"), vim.fn.col("'<"), vim.fn.col("'>"))
-    return require('telescope.builtin').live_grep({
-        cwd = "/Volumes/git/vscode-team/forge/packages/pipelines",
-        search_dirs = {
-            "authoring-vscode-extension",
-            "authoring-vscode-extension-core",
-            "authoring-vscode-extension-core-types",
-            "authoring-vscode-extension-integration-test",
-            "authoring-vscode-extension-types",
-            "authoring-vscode-extension-utils",
-            "authoring-vscode-extension-webviews"
-        }, -- TODO(aagg): Better way to select directory
-        glob = {
-            "!changelog",
-            "!vendor",
-            "!*_test.go",
-            "!*Test.java",
-        }
-    })
-end, { desc = '[S]earch source using [G]rep' })
-
 vim.keymap.set('n', '<leader>sd', require('telescope.builtin').diagnostics, { desc = '[S]earch [D]iagnostics' })
 
 -- }}}
@@ -938,6 +917,11 @@ for server_name, server_settings in pairs(servers) do
         capabilities = capabilities,
         settings = server_settings,
     })
+end
+
+local local_config = vim.fn.stdpath("config") .. "/local.lua"
+if vim.fn.filereadable(local_config) == 1 then
+    dofile(local_config)
 end
 
 -- }}}
